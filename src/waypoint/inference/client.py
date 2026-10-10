@@ -4,6 +4,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request,build_opener,ProxyHandler,HTTPRedirectHandler
 from waypoint.branding import APP_NAME
+from urllib.error import HTTPError
+from waypoint.inference.budget import compact
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):
         raise ValueError("Redirect blocked: inference must stay local.")
@@ -28,6 +30,13 @@ class Client:
         if not isinstance(system_guidance,str) or not isinstance(temperature,(int,float)) or not 0<=temperature<=2: raise ValueError('Invalid inference guidance or temperature.')
         self.system_guidance=system_guidance; self.temperature=temperature
         self.opener=build_opener(ProxyHandler({}),NoRedirect())
+    def prompt_tokens(self,messages):
+        def post(path,data):
+            request=Request(self.base[:-3]+path,data=json.dumps(data).encode(),headers={'Content-Type':'application/json'})
+            with self.opener.open(request,timeout=self.timeout) as response:
+                return json.loads(response.read(2_000_001))
+        formatted=post('/apply-template',{'messages':messages,'reasoning_effort':'none'})['prompt']
+        return len(post('/tokenize',{'content':formatted,'add_special':True})['tokens'])
     def complete(self,prompt,image=None,schema=None,max_tokens=384):
         content=[{'type':'text','text':prompt}]
         if image:
@@ -39,9 +48,25 @@ class Client:
             content.append({'type':'image_url','image_url':{'url':'data:'+mime+';base64,'+base64.b64encode(raw).decode('ascii')}})
         payload={'model':self.model,'messages':[{'role':'system','content':self.system_guidance},{'role':'user','content':content}], 'temperature':self.temperature,'max_tokens':max_tokens,'stream':False,'reasoning_effort':'none'}
         if schema: payload['response_format']={'type':'json_object','schema':schema}
+        if not image:
+            # Keep the supported 4K profile and reserve answer + template margin.
+            allowance=4096-max_tokens-128
+            for level in range(4):
+                if level: content[0]['text']=compact(prompt,level)
+                try: count=self.prompt_tokens(payload['messages'])
+                except (KeyError,TypeError,ValueError,HTTPError) as exc:
+                    raise ValueError('Could not check local request size. Use the supported llama.cpp server and try again.') from exc
+                if count<=allowance: break
+            else:
+                raise ValueError('This question and its supporting information exceed the 4096-token limit. Please narrow the question or start a fresh conversation.')
         req=Request(self.base+'/chat/completions',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
-        with self.opener.open(req,timeout=self.timeout) as r:
-            raw=r.read(2_000_001)
+        try:
+            with self.opener.open(req,timeout=self.timeout) as r:
+                raw=r.read(2_000_001)
+        except HTTPError as exc:
+            if exc.code==400:
+                raise ValueError('The local engine rejected the request. Its context or model settings may not match the app; try a shorter question.') from exc
+            raise
         if len(raw)>2_000_000: raise ValueError('Response exceeds limit.')
         result=json.loads(raw); choice=result['choices'][0]; message=choice['message']
         if choice.get('finish_reason')!='stop': raise ValueError('Incomplete model response: '+str(choice.get('finish_reason')))
