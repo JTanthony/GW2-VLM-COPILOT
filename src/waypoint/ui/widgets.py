@@ -1,5 +1,6 @@
 import tkinter as tk
 from pathlib import Path
+from waypoint.paths import app_root
 from .theme import BG,PANEL,TEXT,MUTED,ACCENT
 
 class DarkScrollbar(tk.Canvas):
@@ -53,7 +54,7 @@ class OvalSlider(tk.Canvas):
                          highlightthickness=0, cursor='hand2', takefocus=True)
         self.command = command
         self.value = 96
-        self.thumb = tk.PhotoImage(file=str(Path(__file__).resolve().parents[3] / 'assets/ui/slider-thumb.png'))
+        self.thumb = tk.PhotoImage(file=str(app_root() / 'assets/ui/slider-thumb.png'))
         self.bind('<Button-1>', self.choose)
         self.bind('<B1-Motion>', self.choose)
         self.bind('<Left>', lambda event: self.set(self.value - 1))

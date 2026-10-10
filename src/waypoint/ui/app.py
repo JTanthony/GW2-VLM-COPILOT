@@ -7,6 +7,7 @@ from .theme import BG,PANEL,TEXT,MUTED,ACCENT
 from .widgets import DarkScrollbar,OvalSlider
 from .onboarding import WELCOME
 from waypoint.branding import APP_NAME
+from waypoint.paths import app_root,data_root
 from waypoint.storage import preferences
 from waypoint.capture.windows import list_windows
 from waypoint.capture.feed import Feed
@@ -15,16 +16,17 @@ from waypoint.inference.client import Client
 from waypoint.assistant.local import Assistant
 from waypoint.integrations.accounts import Accounts,connector_for,suggest_games,public_api_for
 from waypoint.assistant.routing import is_greeting,needs_screen,force_new_analysis,is_research_request
-ROOT=Path(__file__).resolve().parents[3]
+ROOT=data_root()
+ASSETS=app_root()
 class App:
     def __init__(self,smoke=False):
         self.smoke=smoke
         self.root=tk.Tk(); self.root.title(APP_NAME); self.root.overrideredirect(True)
         self.root.configure(bg=BG); self.root.minsize(360,300)
-        self.brand_icon=tk.PhotoImage(file=str(ROOT/'assets/branding/gw2-vlm-copilot-32.png'))
-        self.header_icon=tk.PhotoImage(file=str(ROOT/'assets/branding/gw2-vlm-copilot-24.png'))
+        self.brand_icon=tk.PhotoImage(file=str(ASSETS/'assets/branding/gw2-vlm-copilot-32.png'))
+        self.header_icon=tk.PhotoImage(file=str(ASSETS/'assets/branding/gw2-vlm-copilot-24.png'))
         self.root.iconphoto(True,self.brand_icon)
-        self.root.iconbitmap(str(ROOT/'assets/branding/gw2-vlm-copilot.ico'))
+        self.root.iconbitmap(str(ASSETS/'assets/branding/gw2-vlm-copilot.ico'))
         self.accounts=Accounts()
         self.settings=preferences.load(ROOT); self.size=max(9,min(20,int(self.settings.get('font_size',10))))
         self.font=tkfont.Font(family='Segoe UI',size=self.size)
@@ -154,7 +156,7 @@ class App:
     def select_window(self):
         if self.busy: return
         windows=list_windows()
-        dialog=tk.Toplevel(self.root); dialog.title(APP_NAME+' - Select window'); dialog.iconphoto(False,self.brand_icon); dialog.iconbitmap(str(ROOT/'assets/branding/gw2-vlm-copilot.ico')); dialog.geometry('500x300'); dialog.attributes('-topmost',True)
+        dialog=tk.Toplevel(self.root); dialog.title(APP_NAME+' - Select window'); dialog.iconphoto(False,self.brand_icon); dialog.iconbitmap(str(ASSETS/'assets/branding/gw2-vlm-copilot.ico')); dialog.geometry('500x300'); dialog.attributes('-topmost',True)
         tk.Label(dialog,text=APP_NAME,image=self.header_icon,compound='left',font=('Segoe UI Semibold',10)).pack(anchor='w',padx=10,pady=(8,0))
         tk.Label(dialog,text='Choose the game/application window for continuous local vision.',wraplength=470).pack(pady=8)
         choices=tk.Listbox(dialog,exportselection=False); choices.pack(fill='both',expand=True,padx=10)

@@ -18,3 +18,5 @@ config/player.local.json
 *.bin
 *.pt
 *.pth
+
+packaging/*.spec

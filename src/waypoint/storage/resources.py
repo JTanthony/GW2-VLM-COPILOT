@@ -2,10 +2,10 @@
 import hashlib,json,re,time
 from pathlib import Path
 from datetime import datetime,timezone
+from waypoint.paths import data_root
 
 def project_root():
-    # RELEASE BLOCKER: migrate to per-user Windows app-data; see docs/RESOURCE_STORAGE.md.
-    return Path(__file__).resolve().parents[3]/'local-data/projects'
+    return data_root()/'local-data/projects'
 
 def slug(name):
     value=re.sub(r'[^a-z0-9]+','-',name.lower()).strip('-')[:64]

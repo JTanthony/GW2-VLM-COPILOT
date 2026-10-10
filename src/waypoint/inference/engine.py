@@ -1,5 +1,5 @@
 """Own one local child engine; never stop another application's model server."""
-import json,socket,subprocess,time
+import json,socket,subprocess,time,sys,ctypes
 from pathlib import Path
 from urllib.request import build_opener,ProxyHandler
 from waypoint.inference.client import NoRedirect
@@ -28,6 +28,8 @@ class Engine:
         if 'cache_type_v' in c: args.extend(['--cache-type-v',c['cache_type_v']])
         if 'gpu_margin_mb' in c: args.extend(['--fit-target',str(c['gpu_margin_mb'])])
         try:
+            # Avoid passing PyInstaller's bundled DLL search path to the external server.
+            if getattr(sys,'frozen',False) and sys.platform=='win32': ctypes.windll.kernel32.SetDllDirectoryW(None)
             self.process=subprocess.Popen(args,cwd=exe.parent,stdout=self.log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
             opener=build_opener(ProxyHandler({}),NoRedirect()); deadline=time.monotonic()+120
             while time.monotonic()<deadline:
