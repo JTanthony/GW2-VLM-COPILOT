@@ -11,7 +11,7 @@ This is a source release, not a ready-to-install executable. Model weights and l
 - [Privacy and contribution safety](docs/PRIVACY.md)
 - [Third-party notices](docs/THIRD_PARTY.md)
 
-Gemma 4 12B handles answers and vision through a loopback llama.cpp server. Optional Gemma 3 1B generates GW2 player questions in the text tester. Neither model learns automatically from use. Wiki research sends generated public game search terms online; optional account connection calls the official GW2 API. Inference stays local.
+Gemma 4 12B handles answers and vision through a loopback llama.cpp server. Optional Gemma 3 1B generates GW2 player questions in the text tester. Neither model learns automatically from use. Improvements require deliberate testing and reviewed changes to the app, prompts, or training data. A more capable AI model can assist with that process. Wiki research sends generated public game search terms online; optional account connection calls the official GW2 API. Inference stays local.
 
 ## Current limitations
 
