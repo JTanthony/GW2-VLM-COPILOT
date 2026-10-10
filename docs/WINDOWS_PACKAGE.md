@@ -4,7 +4,7 @@ Designed for Gemma 4 12B QAT Q4_0. Other llama.cpp-compatible GGUF models may be
 
 Extract the entire ZIP into a writable folder (for example Downloads or Documents), then open GW2-VLM-COPILOT.exe. Keep the _internal and assets folders beside the executable. Python does not need to be installed. This is an unsigned experimental application, not a signed installer.
 
-The included Models folder contains a short guide. Put your downloaded model, matching vision companion and extracted llama.cpp server folder there. See the top-level README for download links and CUDA DLL instructions. No model weights or engine binaries are bundled.
+The included Models folder is empty. Put your downloaded model, matching vision companion and extracted llama.cpp server folder there. See the top-level README for download links and CUDA DLL instructions. No model weights or engine binaries are bundled.
 
 First launch opens local setup. Download a Windows llama.cpp server and required matching DLLs from https://github.com/ggml-org/llama.cpp/releases/tag/b11512, and separately obtain your Gemma 4 12B GGUF and matching vision projector. Select those local files and save. The app does not silently download or execute files in setup. Click Start engine only when ready. Model/runtime files are not included; NVIDIA drivers and appropriate GPU memory are still required. Leaving the projector blank enables text-only configuration.
 
