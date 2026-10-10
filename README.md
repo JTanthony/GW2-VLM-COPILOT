@@ -8,7 +8,9 @@ A portable Windows alpha is available on the [Releases page](https://github.com/
 
 ## Install the Windows download (NVIDIA GPU)
 
-Python and LM Studio are not required. This alpha downloads the engine and model separately; setup only selects files already on your PC.
+Python and LM Studio are not required. Download the engine and model separately; setup only selects files already on your PC.
+
+Designed for **Gemma 4 12B QAT Q4_0**, the recommended model for chat and vision. Other llama.cpp-compatible GGUF models may be used; vision requires a compatible model and matching projector. Alternative models are not yet validated. Model weights are not bundled in this alpha.
 
 1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`.
 2. Download BOTH llama.cpp b11512 Windows CUDA 12.4 ZIPs below. Extract both into the SAME separate engine folder, keeping all DLLs beside `llama-server.exe`. Do not select an executable inside a ZIP. Keep your NVIDIA driver installed and current.
@@ -51,3 +53,4 @@ Gemma 4 12B handles answers and vision through a loopback llama.cpp server. Opti
 ## License
 
 [MIT](LICENSE) covers project code. Dependencies, model weights, retrieved wiki content and third-party materials retain their own terms. Do not bundle your credentials, account data, model files or local logs in contributions.
+
