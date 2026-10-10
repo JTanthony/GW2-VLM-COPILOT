@@ -6,6 +6,32 @@ A portable Windows alpha is available on the [Releases page](https://github.com/
 
 ## Start here
 
+## Install the Windows download (NVIDIA GPU)
+
+Python and LM Studio are not required. This alpha downloads the engine and model separately; setup only selects files already on your PC.
+
+1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`.
+2. Download BOTH llama.cpp b11512 Windows CUDA 12.4 ZIPs below. Extract both into the SAME separate engine folder, keeping all DLLs beside `llama-server.exe`. Do not select an executable inside a ZIP. Keep your NVIDIA driver installed and current.
+
+   Server: https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip
+
+   Required CUDA libraries: https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip
+
+3. Download these two files into a model folder. Allow about 7.2 GB for them. The 12B model handles both chat and vision; the 1B development tester is not needed.
+
+   Model (`gemma-4-12B-it-QAT-Q4_0.gguf`): https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/gemma-4-12B-it-QAT-Q4_0.gguf?download=true
+
+   Matching projector (`mmproj-gemma-4-12B-it-QAT-BF16.gguf`): https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/mmproj-gemma-4-12B-it-QAT-BF16.gguf?download=true
+
+4. Open `GW2-VLM-COPILOT.exe`. In setup, Browse to the extracted `llama-server.exe`, the model, and its matching projector. Click **Save and open app**, then **Start engine**. Close other copilot engines first to free the GPU and port.
+5. Try ordinary chat first. For vision, click **Select window**, choose GW2, and approve capture. Keep the game restored; minimizing pauses capture.
+
+This download recipe targets Windows x64 with an NVIDIA GPU. Hardware affects loading and response speed; other GPU backends require a compatible llama.cpp build and have not been validated here. If the engine exits, check `%LOCALAPPDATA%\GW2 VLM COPILOT\local-data\engine.log`. To change files later, launch `GW2-VLM-COPILOT.exe --setup`.
+
+URLs are written out so they can be copied from Notepad. More details and the clean-Windows checklist are in `docs/WINDOWS_PACKAGE.md`.
+
+## Project documentation
+
 - [Windows setup](docs/SETUP.md)
 - [Development, testing and optional fine-tuning](docs/DEVELOPMENT.md)
 - [Privacy and contribution safety](docs/PRIVACY.md)

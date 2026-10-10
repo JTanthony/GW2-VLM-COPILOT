@@ -2,11 +2,14 @@
 import json
 import tkinter as tk
 from tkinter import filedialog,messagebox
-from waypoint.paths import data_root
+from waypoint.paths import app_root,data_root
 from waypoint.branding import APP_NAME
 
 def configure():
     root=tk.Tk();root.title(APP_NAME+' - Setup');root.geometry('580x370')
+    brand_icon=tk.PhotoImage(file=str(app_root()/'assets/branding/gw2-vlm-copilot-32.png'))
+    root.iconphoto(True,brand_icon)
+    root.iconbitmap(str(app_root()/'assets/branding/gw2-vlm-copilot.ico'))
     tk.Label(root,text='Set up your local copilot',font=('Segoe UI',14,'bold')).pack(pady=12)
     tk.Label(root,text='Select a llama.cpp Windows server, a Gemma 4 12B GGUF, and its matching projector for vision. Files stay on your computer. This setup does not download or run them.',wraplength=540,justify='left').pack(padx=16)
     fields={}
