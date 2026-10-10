@@ -10,7 +10,7 @@ Python and LM Studio are not required. Download the engine and model separately;
 
 Designed for **Gemma 4 12B QAT Q4_0**, the recommended model for chat and vision. Other llama.cpp-compatible GGUF models may be used; vision requires a compatible model and matching projector. Alternative models are not yet validated. Model weights are not bundled in this alpha.
 
-1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`. Create a folder named `Models` inside that app folder if it is not already present.
+1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`. The included `Models` folder is where you put your model and engine downloads; it contains a short guide, not model weights.
 2. Download BOTH ZIPs below. Extract the server ZIP, then place its extracted `llama-b11512-bin-win-cuda-12.4-x64` folder inside the app's `Models` folder. Open that extracted folder and locate `llama-server.exe`.
 
    Server: https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip
