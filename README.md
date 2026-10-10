@@ -48,7 +48,7 @@ The setup window then lets you select your downloaded llama server, answering mo
 
 The tester uses Gemma 3 1B to generate player questions and the app’s configured model to answer them. Regular app users do not need the 1B model.
 
-1. Download Gemma 3 1B IT Q4_K_M.gguf and save it in your local model folder. Review the license on the model page.
+1. Download [Gemma 3 1B IT Q4_K_M.gguf](https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf?download=true) and save it in your local model folder. Review the license on the model page.
 
 2. Complete the app setup above, then close the app and let its engine stop.
 
