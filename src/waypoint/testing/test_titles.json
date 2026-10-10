@@ -1,0 +1,14 @@
+[
+  {"game":"World of Warcraft","focus":"Retail: achievements, collections, content unlocks, returning players and gearing; clarify expansion and patch."},
+  {"game":"World of Warcraft Classic","focus":"Classic: quest prerequisites, professions, dungeon preparation and travel; clarify Classic version and realm rules."},
+  {"game":"Final Fantasy XIV","focus":"Content unlocks, job progression, crafting, collections and quest chains; clarify patch and spoiler preferences."},
+  {"game":"Old School RuneScape","focus":"Quest prerequisites, achievement diaries, skill requirements, travel and money-making tradeoffs; clarify membership and account restrictions."},
+  {"game":"Guild Wars 2","focus":"Achievements, collections, timed events, exploration and dated account progress."},
+  {"game":"The Elder Scrolls Online","focus":"Quest order, skill lines, crafting research, gear collections and solo progression; clarify owned content."},
+  {"game":"Path of Exile 2","focus":"Build explanations, equipment decisions, progression barriers and endgame systems; clarify patch and league.","skip":["event timing and missed events"]},
+  {"game":"Path of Exile","focus":"Build troubleshooting, crafting, league progression and complex mechanics; clarify patch and league.","skip":["event timing and missed events"]},
+  {"game":"Diablo IV","focus":"Seasonal objectives, equipment choices, difficulty progression and endgame priorities; clarify season and expansion.","skip":["event timing and missed events"]},
+  {"game":"Last Epoch","focus":"Skill interactions, crafting, loot filters and endgame progression; clarify cycle and patch.","skip":["event timing and missed events"]},
+  {"game":"Baldur's Gate 3","focus":"Branching quests, character builds, consequences and spoiler-controlled guidance; clarify act and difficulty.","skip":["event timing and missed events","solo and group barriers","zone completion research"]},
+  {"game":"Elden Ring","focus":"NPC quest chains, boss preparation, equipment requirements and exploration routes; clarify progression and DLC.","skip":["event timing and missed events","solo and group barriers"]}
+]

@@ -1,0 +1,7 @@
+{
+  "executable": "runtime/llama-b11512/llama-server.exe",
+  "port": 17865,
+  "model_path": "C:/Models/Gemma/model.gguf",
+  "projector_path": "C:/Models/Gemma/mmproj.gguf",
+  "gpu_layers": "auto"
+}

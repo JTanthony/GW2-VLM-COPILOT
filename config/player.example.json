@@ -1,0 +1,13 @@
+{
+  "executable": "runtime/llama-b11512/llama-server.exe",
+  "port": 17866,
+  "alias": "waypoint-test-player",
+  "model_path": "C:/Models/Gemma/gemma-3-1b-it-Q4_K_M.gguf",
+  "gpu_layers": 0,
+  "device": "none",
+  "kv_offload": false,
+  "context_length": 2048,
+  "threads": 2,
+  "batch_size": 256,
+  "physical_batch_size": 128
+}
