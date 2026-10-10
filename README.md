@@ -34,6 +34,34 @@ This download recipe targets Windows x64 with an NVIDIA GPU. Hardware affects lo
 
 URLs are written out so they can be copied from Notepad. More details and the clean-Windows checklist are in `docs/WINDOWS_PACKAGE.md`.
 
+## Running from source
+
+Install 64-bit Python 3.12 with the Python launcher and Tcl/Tk. If you already have the Python install manager, open PowerShell and run:
+
+py install 3.12
+
+Alternatively, download Python 3.12 from python.org.
+Extract the entire project ZIP, then double-click run-GW2-VLM-COPILOT.cmd. Choose Y to create the local Python environment and install dependencies. This step requires internet access.
+The setup window then lets you select your downloaded llama server, answering model, and matching vision projector. Models and llama.cpp are downloaded separately.
+
+## Optional developer tester: Gemma 3 1B
+
+The tester uses Gemma 3 1B to generate player questions and the app’s configured model to answer them. Regular app users do not need the 1B model.
+
+1. Download [Gemma 3 1B IT Q4_K_M.gguf](https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf?download=true) and save it in your local model folder. Review the license on the model page.
+
+2. Complete the app setup above, then close the app and let its engine stop.
+
+3. Run run-gw2-wiki-for-training.cmd.
+
+4. On first launch, select your llama-server.exe and downloaded 1B model, then click Save and start tests. The tester saves its configuration automatically.
+
+No vision projector is needed for the 1B tester. The default batch requires a previously saved GW2 account connection. It runs up to three hours, five turns per session, or 1,000 sessions—whichever limit comes first.
+
+Run stop-gw2-wiki-for-training.cmd to stop. Active inference finishes before the engines close.
+
+Results stay in local-data/text-playtests. Keep account-derived logs private. These runs generate material for review; they do not automatically train either model.
+
 ## Project documentation
 
 ##### Uninstall the portable app
