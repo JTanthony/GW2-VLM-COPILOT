@@ -6,14 +6,16 @@ from waypoint.paths import app_root,data_root
 from waypoint.branding import APP_NAME
 
 def configure():
-    root=tk.Tk();root.title(APP_NAME+' - Setup');root.geometry('580x370')
+    root=tk.Tk();root.title(APP_NAME+' - Setup');root.geometry('640x430')
     brand_icon=tk.PhotoImage(file=str(app_root()/'assets/branding/gw2-vlm-copilot-32.png'))
     root.iconphoto(True,brand_icon)
-    root.iconbitmap(str(app_root()/'assets/branding/gw2-vlm-copilot.ico'))
+    icon_path=str(app_root()/'assets/branding/gw2-vlm-copilot.ico')
+    root.iconbitmap(default=icon_path)
+    root.after_idle(lambda:root.iconbitmap(icon_path))
     tk.Label(root,text='Set up your local copilot',font=('Segoe UI',14,'bold')).pack(pady=12)
-    tk.Label(root,text='Select a llama.cpp Windows server, a Gemma 4 12B GGUF, and its matching projector for vision. Files stay on your computer. This setup does not download or run them.',wraplength=540,justify='left').pack(padx=16)
+    tk.Label(root,text='Recommended: Gemma 4 12B QAT Q4_0 for chat and vision. The projector lets this model read images; it is NOT the Gemma 3 1B development test model. Other compatible GGUF models may be selected. Setup does not download or run files.',wraplength=600,justify='left').pack(padx=16)
     fields={}
-    for name,label,pattern in [('executable','llama-server.exe','*.exe'),('model_path','Gemma model GGUF','*.gguf'),('projector_path','Matching vision projector (optional for chat)','*.gguf')]:
+    for name,label,pattern in [('executable','llama.cpp server: llama-server.exe','*.exe'),('model_path','Gemma 4 12B QAT Q4_0: gemma-4-12B-it-QAT-Q4_0.gguf','*.gguf'),('projector_path','12B vision companion: mmproj-gemma-4-12B-it-QAT-BF16.gguf','*.gguf')]:
         row=tk.Frame(root);row.pack(fill='x',padx=16,pady=8)
         tk.Label(row,text=label).pack(anchor='w')
         value=tk.StringVar();fields[name]=value
@@ -36,5 +38,6 @@ def configure():
         directory=data_root()/'config';directory.mkdir(parents=True,exist_ok=True)
         (directory/'inference.local.json').write_text(json.dumps(values,indent=2),encoding='utf-8')
         saved=True;root.destroy()
+    tk.Label(root,text='The projector is required for vision. Leave it blank only for text-only chat.',wraplength=600).pack(pady=4)
     tk.Button(root,text='Save and open app',command=save).pack(pady=12)
     root.mainloop();return saved
