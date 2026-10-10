@@ -11,7 +11,7 @@ from waypoint.branding import APP_NAME
 def launch():
     if '--check-package' in sys.argv:
         check_package();return
-    if getattr(sys,'frozen',False) and '--smoke' not in sys.argv and ('--setup' in sys.argv or not (data_root()/'config/inference.local.json').exists()):
+    if '--smoke' not in sys.argv and ('--setup' in sys.argv or not (data_root()/'config/inference.local.json').exists()):
         from waypoint.ui.setup import configure
         if not configure():return
         if '--setup' in sys.argv:sys.argv.remove('--setup')

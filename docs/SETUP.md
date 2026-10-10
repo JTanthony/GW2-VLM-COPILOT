@@ -2,7 +2,13 @@
 
 Use 64-bit Windows and Python 3.12 with tkinter (included in the normal python.org Windows installer). An NVIDIA CUDA-compatible GPU is the development target. The app was developed on an 8 GB RTX 3060 Ti with partial offload; expect slow responses. VRAM requirements depend on context, image size and offload. Close competing model servers before launch.
 
-## Install Python dependencies
+## First launch from a source download
+
+Extract the entire source ZIP before launching. Install 64-bit Python 3.12 with the Python launcher and Tcl/Tk. Double-click `run-GW2-VLM-COPILOT.cmd`. If the project environment or dependencies are missing, the launcher offers to create `.venv` and install `requirements.txt`; this dependency installation requires internet access. It does not download models or llama.cpp. Declining leaves setup unfinished.
+
+When `config/inference.local.json` is missing, the app opens its setup window. Browse to your downloaded `llama-server.exe`, model GGUF, and matching vision projector, then click Save and open app. Leave the projector blank only for text-only chat. Existing configuration is preserved. The source launcher keeps startup failures visible in its console.
+
+## Manual Python setup
 
 Download or clone this repository, open PowerShell in its root, then run:
 
