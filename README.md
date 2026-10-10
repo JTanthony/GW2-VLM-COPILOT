@@ -4,22 +4,22 @@ Experimental Windows local AI copilot for Guild Wars 2. Ask questions, research 
 
 A portable Windows alpha is available on the [Releases page](https://github.com/JTanthony93/GW2-VLM-COPILOT/releases). Extract the ZIP and open GW2-VLM-COPILOT.exe; Python is bundled. See [Windows package instructions](docs/WINDOWS_PACKAGE.md). Fresh-Windows, GPU and gameplay acceptance remain unverified. Model weights and llama.cpp runtime binaries are downloaded separately. Answers can be incorrect: do not treat generated guides or screen readings as verified facts.
 
-## Start here
-
 ## Install the Windows download (NVIDIA GPU)
 
 Python and LM Studio are not required. Download the engine and model separately; setup only selects files already on your PC.
 
 Designed for **Gemma 4 12B QAT Q4_0**, the recommended model for chat and vision. Other llama.cpp-compatible GGUF models may be used; vision requires a compatible model and matching projector. Alternative models are not yet validated. Model weights are not bundled in this alpha.
 
-1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`.
-2. Download BOTH llama.cpp b11512 Windows CUDA 12.4 ZIPs below. Extract both into the SAME separate engine folder, keeping all DLLs beside `llama-server.exe`. Do not select an executable inside a ZIP. Keep your NVIDIA driver installed and current.
+1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`. Create a folder named `Models` inside that app folder if it is not already present.
+2. Download BOTH ZIPs below. Extract the server ZIP, then place its extracted `llama-b11512-bin-win-cuda-12.4-x64` folder inside the app's `Models` folder. Open that extracted folder and locate `llama-server.exe`.
 
    Server: https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip
 
    Required CUDA libraries: https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip
 
-3. Download these two files into a model folder. Allow about 7.2 GB for them. The 12B model handles both chat and vision; the 1B development tester is not needed.
+   Extract the CUDA libraries ZIP separately. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the extracted server folder, directly beside `llama-server.exe`. Copy the DLL files themselves, not their enclosing folder. Keep all the server's original DLLs too. Do not select an executable inside a ZIP. Keep your NVIDIA driver installed and current.
+
+3. Download these two files directly into the app's `Models` folder. Allow about 7.2 GB for them. The 12B model handles both chat and vision; its projector is the companion file that lets it read images, not a second chat model. The optional Gemma 3 1B development tester is not needed to use the app. If you want to help improve the project through testing, see [the development notes](docs/DEVELOPMENT.md).
 
    Model (`gemma-4-12B-it-QAT-Q4_0.gguf`): https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/gemma-4-12B-it-QAT-Q4_0.gguf?download=true
 
@@ -53,4 +53,3 @@ Gemma 4 12B handles answers and vision through a loopback llama.cpp server. Opti
 ## License
 
 [MIT](LICENSE) covers project code. Dependencies, model weights, retrieved wiki content and third-party materials retain their own terms. Do not bundle your credentials, account data, model files or local logs in contributions.
-
