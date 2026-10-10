@@ -22,11 +22,13 @@ Edit config/inference.local.json: set model_path and projector_path to the downl
 
 ## Launch
 
-Double-click run-waypoint.cmd, or run:
+These instructions are for running the source project. Double-click `run-GW2-VLM-COPILOT.cmd` in the repository root, or run:
 
 ```powershell
 .\.venv\Scripts\python.exe tools/run_gui.py
 ```
+
+For the downloadable Windows package, open `GW2-VLM-COPILOT.exe` instead; see [Windows package instructions](WINDOWS_PACKAGE.md). Packaged settings and logs are stored under `%LOCALAPPDATA%\GW2 VLM COPILOT`; source runs use the project folder. Saved tokens retain the protected `%LOCALAPPDATA%\Waypoint\credentials` location.
 
 Click Start engine. Ordinary chat does not require capture. For vision, Select window and explicitly approve capture. Pause revokes capture approval. Close with the app's close button so owned work and the server can shut down.
 

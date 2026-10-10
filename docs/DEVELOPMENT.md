@@ -15,7 +15,7 @@ Copy-Item config/player.example.json config/player.local.json
 .\.venv\Scripts\python.exe tools/run_text_sessions.py --sessions 4 --turns 4 --hours 0.2 --account-mode dummy
 ```
 
-Dummy records are synthetic, not real GW2 achievements; do not judge invented dummy-name mechanics as real guides. Saved mode uses your previously connected GW2 account and creates private snapshot-derived logs. run-text-tests.cmd uses saved mode with four turns/session, up to eight hours. stop-text-tests.cmd requests a stop between inferences; wait for both engines before restarting.
+Dummy records are synthetic, not real GW2 achievements; do not judge invented dummy-name mechanics as real guides. Saved mode uses your previously connected GW2 account and creates private snapshot-derived logs. `run-gw2-wiki-for-training.cmd` uses saved mode for Guild Wars 2 with five turns per session, up to 1,000 sessions or three hours, whichever comes first. The launcher name refers to preparing and reviewing test material; it does not train model weights. stop-gw2-wiki-for-training.cmd requests a stop between inferences; wait for both engines before restarting.
 
 Local reports are under local-data/text-playtests. seconds measures the copilot answer; player_seconds measures question preparation; total_seconds measures the full successful turn, excluding the configured inter-turn delay. Flags are review suggestions, not correctness scores.
 

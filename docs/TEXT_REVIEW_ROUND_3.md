@@ -30,4 +30,4 @@ Affected unit checks passed: 11 tester, 12 web lookup, 18 research, and 9 resour
 
 Close the GUI and let both prior test engines exit. Start run-gw2-wiki-for-training.cmd for the next three-hour text batch. Review the first three regression subjects before a long unattended run. Stop with stop-gw2-wiki-for-training.cmd; allow active inference and cleanup to finish. No capture is started. Reports remain local; do not upload raw account conversations.
 
-Nothing from this review has been published to GitHub. Rebuild and verify the Windows package only after live answer-quality testing.
+These source changes do not update an already downloaded Windows executable. Rebuild and verify the Windows package only after live answer-quality testing. The training launcher prepares test records for review; it does not update model weights.
