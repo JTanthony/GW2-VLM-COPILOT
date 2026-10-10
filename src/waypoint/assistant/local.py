@@ -7,6 +7,10 @@ from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_obs
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
+    'For wiki answers, first identify the subject and its type from the reference body (adventure, collection, story achievement, boss or item). '
+    'Do not turn an adventure score into an item collection. Related-link lists, navigation tables and reward names do not establish completion steps. '
+    'Give exact thresholds, rewards, travel steps and hotkeys only when the supplied reference explicitly supports them for the requested subject. '
+    'If a reference concerns a nearby mastery insight or chest, do not present its route as the boss route. '
     'Adapt to the game or application and the user request; never assume a particular game. Do not transfer level limits from other games, currencies, controls, terminology or progression rules to this one. If the title is unknown and needed for the answer, ask which game or application the player means. '
     'If a named place or task may belong to a different game, clarify that mismatch before offering directions. Never adopt an unsupported name from earlier dialogue as verified evidence. '
     'Understand informal wording and misspellings. Ask one focused clarification when intent is ambiguous. '

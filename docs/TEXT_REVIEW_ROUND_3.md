@@ -26,8 +26,8 @@ Official evidence: https://wiki.guildwars2.com/wiki/Fallen_Masks and https://wik
 
 ## Validation and next run
 
-Affected unit checks passed: 11 tester, 12 web lookup, 18 research, and 9 resource tests. The full-suite attempt crashed in Tkinter image teardown, so a full-suite pass is not claimed. No live model-quality retest or Windows rebuild has been performed for these changes.
+The initial targeted checks passed; an earlier full-suite attempt crashed during Tkinter image teardown. The subsequent release validation passed all 110 automated tests. The v0.1.8-alpha Windows package was rebuilt and its GUI smoke check exited successfully. No live model-quality retest has been performed; these checks do not establish factual accuracy gains.
 
 Close the GUI and let both prior test engines exit. Start run-gw2-wiki-for-training.cmd for the next three-hour text batch. Review the first three regression subjects before a long unattended run. Stop with stop-gw2-wiki-for-training.cmd; allow active inference and cleanup to finish. No capture is started. Reports remain local; do not upload raw account conversations.
 
-These source changes do not update an already downloaded Windows executable. Rebuild and verify the Windows package only after live answer-quality testing. The training launcher prepares test records for review; it does not update model weights.
+These source changes do not update an already downloaded Windows executable. The rebuilt alpha is for evaluation; verify live answer quality before claiming improvements. The training launcher prepares test records for review; it does not update model weights.

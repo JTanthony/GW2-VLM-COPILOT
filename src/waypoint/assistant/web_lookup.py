@@ -7,6 +7,15 @@ SOURCES={'Guild Wars 2':('wiki.guildwars2.com','/api.php','/wiki/'),
          'Minecraft':('minecraft.wiki','/api.php','/w/'),
          'Blish HUD':('blishhud.com','/docs/user/faqs/how-does-bhud-work/','/docs/')}
 
+def gw2_topic(query):
+    """Resolve known ambiguous regression subjects to their mechanic page, not loot."""
+    if query.casefold().strip()=='torn from the sky': return 'Torn from the Sky'
+    for pattern,title in ((r'wyvern\s+matri?a(?:r)?ch','Legendary Wyvern Matriarch'),
+                          (r'fallen\s+masks','Fallen Masks'),
+                          (r'\bdug\s+in\b','Torn from the Sky')):
+        if re.search(pattern,query,re.I): return title
+    return None
+
 class ArticleText(HTMLParser):
     def __init__(self):
         super().__init__(); self.article=0; self.blocked=0; self.parts=[]
@@ -103,9 +112,10 @@ def lookup(game,query):
     host,api,page_path=SOURCES[game]
     params={'action':'query','format':'json','generator':'search','gsrsearch':query,'gsrnamespace':0,
             'gsrlimit':2,'prop':'extracts','explaintext':1,'exchars':6000,'formatversion':2}
-    result=wiki_json(host,api,params)
+    topic=gw2_topic(query) if game=='Guild Wars 2' else None
+    result=({'query':{'pages':[{'title':topic}]}} if topic else wiki_json(host,api,params))
     articles=[]
-    for page in result.get('query',{}).get('pages',[])[:2]:
+    for page in sorted(result.get('query',{}).get('pages',[]),key=lambda p:p.get('index',0))[:2]:
         title=page.get('title')
         if isinstance(title,str):
             parsed=wiki_json(host,api,{'action':'parse','page':title,'prop':'text','format':'json','formatversion':2,'disableeditsection':1})

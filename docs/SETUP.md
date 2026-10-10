@@ -4,7 +4,7 @@ Use 64-bit Windows and Python 3.12 with tkinter (included in the normal python.o
 
 ## First launch from a source download
 
-Extract the entire source ZIP before launching. Install 64-bit Python 3.12 with the Python launcher and Tcl/Tk. Double-click `run-GW2-VLM-COPILOT.cmd`. If the project environment or dependencies are missing, the launcher offers to create `.venv` and install `requirements.txt`; this dependency installation requires internet access. It does not download models or llama.cpp. Declining leaves setup unfinished.
+Extract the entire source ZIP before launching. Install 64-bit Python 3.12 with the Python launcher and Tcl/Tk. If the Python install manager reports no matching runtime, run `py install 3.12` in PowerShell first. With the traditional Python launcher, use the Python 3.12 installer from python.org instead. Verify `py -3.12 --version` reports Python 3.12 before continuing. Double-click `run-GW2-VLM-COPILOT.cmd`. If the project environment or dependencies are missing, the launcher offers to create `.venv` and install `requirements.txt`; this dependency installation requires internet access. It does not download models or llama.cpp. Declining leaves setup unfinished.
 
 When `config/inference.local.json` is missing, the app opens its setup window. Browse to your downloaded `llama-server.exe`, model GGUF, and matching vision projector, then click Save and open app. Leave the projector blank only for text-only chat. Existing configuration is preserved. The source launcher keeps startup failures visible in its console.
 

@@ -5,6 +5,16 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.assistant.web_lookup import lookup,public_addresses,context
 
 class WebTests(unittest.TestCase):
+    def test_named_gw2_subject_uses_mechanics_page(self):
+        with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':'<p>Silver requires fifteen masks.</p>'}}) as fetch:
+            articles=lookup('Guild Wars 2','Fallen Masks Silver achievement requirements')
+        self.assertEqual(articles[0]['title'],'Fallen Masks')
+        self.assertEqual(fetch.call_args.args[2]['page'],'Fallen Masks')
+        self.assertEqual(fetch.call_count,1)
+    def test_search_rank_preserved(self):
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'Second','index':2},{'title':'First','index':1}]}},{'parse':{'text':'<p>First details</p>'}},{'parse':{'text':'<p>Second details</p>'}}]):
+            articles=lookup('Minecraft','subject')
+        self.assertEqual([a['title'] for a in articles],['First','Second'])
     def test_achievement_names_exclude_reward_and_requirement_labels(self):
         from waypoint.assistant.web_lookup import WikiText
         parser=WikiText(); parser.feed('<tr data-id="achievement123"><th>Exact task name</th><th>1 5</th></tr><tr><td>Completed five outposts</td></tr>')

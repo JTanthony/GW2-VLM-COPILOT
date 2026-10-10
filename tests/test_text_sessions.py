@@ -6,6 +6,10 @@ from waypoint.testing.text_sessions import scenarios,validate_question,run_sessi
 from waypoint.integrations.accounts import Accounts
 
 class TextSessionTests(unittest.TestCase):
+    def test_player_invented_quoted_topic_recovers(self):
+        player=MagicMock(); player.complete.return_value=json.dumps({'question':'How do I finish "Imaginary Quest"?'})
+        question,note=next_question(player,'Verdant Brink',[],1)
+        self.assertNotIn('Imaginary',question); self.assertIn('unsupported',note)
     def test_duplicate_player_question_replaced_with_useful_followup(self):
         player=MagicMock(); player.complete.return_value='{"question":"What next?"}'
         question,note=next_question(player,'scenario',[{'question':'What next?'}],1)

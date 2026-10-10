@@ -93,7 +93,7 @@ class ResearchTests(unittest.TestCase):
         client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Fallen Masks: Silver'})
         with patch('waypoint.assistant.research.lookup',return_value=[]) as lookup:
             research(client,'I need help with Fallen Masks: Silver achievement',[])
-            lookup.assert_called_once_with('Guild Wars 2','Fallen Masks  Silver')
+        lookup.assert_called_once_with('Guild Wars 2','Fallen Masks')
 
     def test_blish_alias_uses_public_docs_without_planner(self):
         client=MagicMock()

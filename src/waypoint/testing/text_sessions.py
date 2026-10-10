@@ -23,7 +23,7 @@ QUESTION_SCHEMA={'type':'object','properties':{'question':{'type':'string'}},'re
 def validate_question(question):
     if not isinstance(question,str) or not 1<=len(question.strip())<=500 or sensitive(question):
         raise ValueError('Generated question failed privacy or length checks.')
-    if re.search(r'(?i)\b(?:what|which).{0,90}\b(?:you (?:want|hope|plan)|do you (?:enjoy|prefer|like))\b',question):
+    if re.search(r'(?i)\b(?:what|which).{0,90}\b(?:you (?:want|hope|plan)|do you (?:enjoy|prefer|like)|are you (?:hoping|looking))\b|\b(?:could|can) you tell me the name.{0,70}you(?:\x27|’)?re looking',question):
         raise ValueError('Generated question used the helper role instead of the player role.')
     return question.strip()
 
@@ -32,6 +32,11 @@ def next_question(player,prompt,dialogue,turn):
     note=None
     try:
         question=validate_question(json.loads(player.complete(prompt,schema=QUESTION_SCHEMA,max_tokens=192))['question'])
+        # Quoted new names are especially likely to be invented by the tiny
+        # player model. Keep them out of tests unless present in its context.
+        names=re.findall(r'[\"\u201c\u2018]([^\"\u201d\u2019]{3,80})[\"\u201d\u2019]',question)
+        if any(name.casefold() not in prompt.casefold() for name in names):
+            note='Player model introduced an unsupported named topic; used a controlled follow-up'
         normalize=lambda value: re.sub(r'[^a-z0-9]','',value.casefold())
         if any(normalize(question)==normalize(item['question']) for item in dialogue):
             note='Player model repeated a question; used a controlled follow-up'
@@ -75,7 +80,12 @@ def title_scenarios(accounts,titles):
         matched=title['game']=='Guild Wars 2' and accounts.selected_game=='Guild Wars 2'
         context=accounts if matched else SimpleNamespace(snapshot=None,names={},selected_game=title['game'])
         plans=[]
-        for plan in scenarios(context):
+        base=scenarios(context)
+        if title['game']=='Guild Wars 2':
+            focused=json.loads(Path(__file__).with_name('gw2_wiki_scenarios.json').read_text('utf-8'))
+            for plan in focused: plan['game']='Guild Wars 2'
+            base=focused+base
+        for plan in base:
             if plan['name'] in title.get('skip',[]): continue
             if not matched and plan['name']=='saved goal versus progress': continue
             plan['title_focus']=title['focus']; plan['account_evidence_available']=bool(matched and accounts.snapshot)
@@ -122,7 +132,7 @@ def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=
                         intents=plan.get('followups',['Ask for the next useful action or clarify a missing detail.'])
                         turn_started=time.monotonic()
                         compact_plan={k:v for k,v in plan.items() if k not in ('followups','starter')}
-                        prompt=json.dumps({'scenario':compact_plan,'followup_intent':intents[max(0,turn-1)%len(intents)],'previous_turns':dialogue[-1:]},ensure_ascii=False)
+                        prompt=json.dumps({'scenario':compact_plan,'original_player_question':plan['starter'],'followup_intent':intents[max(0,turn-1)%len(intents)],'previous_turns':dialogue[-1:]},ensure_ascii=False)
                         question=validate_question(plan['starter']) if turn==0 else None
                         if turn:
                             question,note=next_question(player,prompt,dialogue,turn)

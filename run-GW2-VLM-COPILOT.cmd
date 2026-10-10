@@ -20,10 +20,11 @@ echo the dependencies listed in requirements.txt. No models are downloaded.
 choice /c YN /n /m "Set up this source project now? [Y/N] "
 if errorlevel 2 exit /b 0
 if exist ".venv\Scripts\python.exe" goto install_dependencies
-py -3.12 -c "import tkinter" >nul 2>&1
+py -3.12 -c "import sys, tkinter; assert sys.version_info[:2] == (3,12)" >nul 2>&1
 if errorlevel 1 goto missing_python
 py -3.12 -m venv .venv
-if errorlevel 1 goto setup_failed
+if errorlevel 1 goto missing_python
+if not exist ".venv\Scripts\python.exe" goto missing_python
 :install_dependencies
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 goto setup_failed
@@ -32,7 +33,10 @@ if errorlevel 1 goto setup_failed
 goto launch
 
 :missing_python
-echo Install 64-bit Python 3.12 from https://www.python.org/downloads/windows/
+echo Python 3.12 is unavailable, or its project environment could not be created.
+echo If you have the Python install manager, run: py install 3.12
+echo Otherwise install 64-bit Python 3.12 from:
+echo https://www.python.org/downloads/windows/
 echo Include the Python launcher and Tcl/Tk, then run this file again.
 echo Alternatively, use GW2-VLM-COPILOT.exe from the Windows release ZIP.
 pause
