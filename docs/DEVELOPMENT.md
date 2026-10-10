@@ -6,6 +6,8 @@ The test runner generates questions and records answers. It does not update mode
 
 Gemma 3 1B is the simulated player; Gemma 4 12B is the copilot. The current batch is GW2 only and the 12B research planner is restricted to wiki.guildwars2.com. Retrieved plain-text evidence goes into the answer prompt; completion-only questions may be answered directly from an API record. Wiki requests are bounded and read-only, and may fail or retrieve incomplete evidence.
 
+On first launch, `run-gw2-wiki-for-training.cmd` opens the tester setup window if `config/player.local.json` is missing. Browse to your downloaded `llama-server.exe` and Gemma 3 1B IT Q4_K_M GGUF, then click **Save and start tests**. The window saves the CPU settings and port 17866 automatically; closing it cancels without starting engines. Complete the app launcher setup first for Python dependencies and the answering model. The default saved-account batch also requires a prior successful GW2 Accounts connection. Model files must be downloaded separately. Existing player configuration is preserved.
+
 ## Run a short text batch
 
 Obtain Gemma 3 1B IT Q4_K_M separately, copy config/player.example.json to config/player.local.json and set its model path. The tester uses CPU-only 1B at port 17866 and the configured 12B at port 17865, without the visual projector. Close the GUI engine first.

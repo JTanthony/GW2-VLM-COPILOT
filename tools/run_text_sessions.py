@@ -20,6 +20,23 @@ def main():
     if args.game!='Guild Wars 2': parser.error('Account/API testing uses Guild Wars 2 only. This batch is focused on GW2 wiki and account progress.')
     if not 1<=args.sessions<=10000 or not 1<=args.turns<=20 or not 0<args.hours<=8 or not 0<=args.delay<=60:
         parser.error('Use 1â€“10000 sessions, 1â€“20 turns, up to 8 hours and 0â€“60 seconds delay.')
+    if not (ROOT/'config/player.local.json').is_file():
+        from waypoint.ui.player_setup import configure_player
+        if not configure_player(ROOT): return 0
+    # Validate setup before reports, account access or engine startup.
+    for name in ('player','inference'):
+        path=ROOT/'config'/f'{name}.local.json'
+        if not path.is_file():
+            parser.error(f'Missing config/{name}.local.json. Copy config/{name}.example.json to that filename and set your server and model paths. See docs/DEVELOPMENT.md.')
+        try:
+            config=json.loads(path.read_text('utf-8'))
+            for key in ('executable','model_path','port'):
+                if key not in config: raise ValueError(f'missing {key}')
+            for key in ('executable','model_path'):
+                if not (ROOT/config[key]).is_file():
+                    raise ValueError(f'{key} does not point to an existing file')
+        except (OSError,ValueError,TypeError) as error:
+            parser.error(f'Invalid config/{name}.local.json: {error}. See docs/DEVELOPMENT.md.')
     parent=ROOT/'local-data/text-playtests'
     if (parent/'STOP').exists():
         # A new explicit launch resumes only after both previous engines have closed.

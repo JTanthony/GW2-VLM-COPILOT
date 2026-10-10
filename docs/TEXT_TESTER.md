@@ -2,6 +2,8 @@
 
 The developer runner tests conversation and account progress only. It does not import capture modules, analyze screenshots, control the game, edit app code or train weights. Gemma 3 1B IT generates short player follow-ups; GW2 VLM COPILOT's configured model answers through the normal Assistant chat path. Controlled starter questions establish a player role and goal. The small model is not the authority on correctness.
 
+On first launch, `run-gw2-wiki-for-training.cmd` opens the tester setup window if `config/player.local.json` is missing. Browse to your downloaded `llama-server.exe` and Gemma 3 1B IT Q4_K_M GGUF, then click **Save and start tests**. The window saves the CPU settings and port 17866 automatically; closing it cancels without starting engines. Complete the app launcher setup first for Python dependencies and the answering model. The default saved-account batch also requires a prior successful GW2 Accounts connection. Model files must be downloaded separately. Existing player configuration is preserved.
+
 ## Start and stop
 
 Close GW2 VLM COPILOT with the close button before running this test, so its local engine port is free. Double-click **run-gw2-wiki-for-training.cmd** in the source project folder to test with the saved account token for the configured game (currently Guild Wars 2). A successful earlier connection in Accounts must already have saved that token. The runner uses Windows protection to unlock it inside the account adapter, fetches one dated snapshot, and never prints the token or passes it to either model. Account progress and generated replies may appear in the local test logs; keep those logs private. There is no automatic account refresh during a run.
