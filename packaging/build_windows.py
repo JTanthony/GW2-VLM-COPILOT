@@ -11,6 +11,7 @@ def assemble(folder):
         target=folder/'assets/branding'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/branding'/name,target)
     target=folder/'assets/ui/slider-thumb.png';target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/ui/slider-thumb.png',target)
     for name in ('LICENSE','README.md','requirements.txt'):shutil.copy2(ROOT/name,folder/name)
+    for name in ('Uninstall.cmd','Uninstall.ps1'):shutil.copy2(ROOT/'packaging'/name,folder/name)
     for name in ('WINDOWS_PACKAGE.md','SETUP.md','DEVELOPMENT.md','THIRD_PARTY.md','PRIVACY.md'):
         target=folder/'docs'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'docs'/name,target)
     licenses=folder/'THIRD-PARTY-LICENSES';licenses.mkdir(exist_ok=True)
@@ -24,12 +25,13 @@ def assemble(folder):
     manifest=[]
     for path in sorted(folder.rglob('*')):
         if not path.is_file():continue
+        if path.name=='PACKAGE-MANIFEST.json':continue
         relative=path.relative_to(folder)
         if any(part in forbidden for part in relative.parts) or path.suffix in ('.gguf','.dpapi','.log') or path.name.endswith('.local.json'):raise RuntimeError('Private artifact in package: '+str(relative))
         manifest.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
     (folder/'PACKAGE-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     output=ROOT/'local-data/releases';output.mkdir(parents=True,exist_ok=True)
-    archive=output/'GW2-VLM-COPILOT-v0.1.3-alpha-windows-x64.zip'
+    archive=output/'GW2-VLM-COPILOT-v0.1.4-alpha-windows-x64.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as zipped:
         for path in folder.rglob('*'):
             if path.is_file():zipped.write(path,Path(folder.name)/path.relative_to(folder))

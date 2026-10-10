@@ -34,6 +34,14 @@ URLs are written out so they can be copied from Notepad. More details and the cl
 
 ## Project documentation
 
+## Uninstall the portable app
+
+Close the app and let its engine stop, then double-click `Uninstall.cmd` in the extracted app folder and type `UNINSTALL` to confirm. It removes only packaged app files listed in the manifest. Downloaded models, engine files and saved user data are preserved. A folder installed under Program Files may require running Uninstall as administrator. This portable release does not register itself in Windows Installed apps.
+
+To remove personal data too, delete `%LOCALAPPDATA%\GW2 VLM COPILOT` in Explorer. Protected API tokens are stored separately in `%LOCALAPPDATA%\Waypoint\credentials`; that location may also be used by your development copy, so retain it if you still need those connections. No uninstaller changes that shared token store automatically.
+
+## More documentation
+
 - [Windows setup](docs/SETUP.md)
 - [Development, testing and optional fine-tuning](docs/DEVELOPMENT.md)
 - [Privacy and contribution safety](docs/PRIVACY.md)
