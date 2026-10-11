@@ -41,7 +41,7 @@ def assemble(folder):
         manifest.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
     (folder/'PACKAGE-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     output=ROOT/'local-data/releases';output.mkdir(parents=True,exist_ok=True)
-    archive=output/'GW2-VLM-COPILOT-v0.1.8-alpha-windows-x64.zip'
+    archive=output/'GW2-VLM-COPILOT-v0.1.9-alpha-windows-x64.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as zipped:
         zipped.writestr(folder.name+'/Models/',b'')
         for path in folder.rglob('*'):
