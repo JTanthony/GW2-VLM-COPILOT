@@ -7,6 +7,10 @@ from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_obs
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
+    'Keep the player-selected subject through follow-ups. A related article is not permission to change the goal or expansion. '
+    'For map completion, check all applicable objective types: waypoints, points of interest, vistas, hearts and hero challenges. '
+    'An extract about vistas alone cannot establish a full map checklist. Separate zone completion from lantern achievements and encounter completion. '
+    'If requested requirements are absent, state the specific missing evidence; do not infer unlocks from nearby tracks or navigation links. '
     'For wiki answers, first identify the subject and its type from the reference body (adventure, collection, story achievement, boss or item). '
     'Do not turn an adventure score into an item collection. Related-link lists, navigation tables and reward names do not establish completion steps. '
     'Give exact thresholds, rewards, travel steps and hotkeys only when the supplied reference explicitly supports them for the requested subject. '

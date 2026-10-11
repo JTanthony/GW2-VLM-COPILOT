@@ -116,6 +116,8 @@ def title_scenarios(accounts,titles):
 
 def findings(question,answer,accounts,seconds):
     issues=[]
+    if 'Online lookup failed during ' in answer:
+        issues.append('User-visible lookup failure: '+answer.split('Online lookup failed during ',1)[1].split('.')[0])
     if seconds>45: issues.append('Slow response: over 45 seconds')
     if re.search(r'(?i)\b(?:check|visit|search|browse|read|open|consult|go to)\b.{0,60}\b(?:wiki|guide|website|google)\b|\b(?:paste|bring|send)\b.{0,60}\b(?:guide|list from|wiki)\b',answer):
         issues.append('Possible research handoff to player; check whether the answer itself supplies usable steps')
@@ -162,6 +164,7 @@ def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=
                         # Only bounded dialogue reaches the small player model.
                         dialogue.append({'question':question,'answer':answer[:400]})
                         summary['cases']+=1; summary['flagged_turns']+=bool(issues)
+                        summary['lookup_failures']=summary.get('lookup_failures',0)+int('Online lookup failed during ' in answer)
                     except Exception as exc:
                         entry['error']=type(exc).__name__+': '+str(exc); summary['errors']+=1
                     log.write(json.dumps(entry,ensure_ascii=False)+'\n'); log.flush()

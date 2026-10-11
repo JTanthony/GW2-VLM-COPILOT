@@ -6,6 +6,42 @@ from waypoint.assistant.research import research
 from waypoint.assistant.local import Assistant
 
 class ResearchTests(unittest.TestCase):
+    def test_unspecified_zone_skips_planning(self):
+        client=MagicMock()
+        self.assertEqual(research(client,"I want a zone's achievements. Ask me which zone if needed",[]),([],''))
+        client.complete.assert_not_called()
+
+    @patch('waypoint.assistant.research.lookup')
+    def test_event_exclamation_is_valid_public_search(self,lookup):
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Defeat the holograms!'})
+        lookup.return_value=[{'title':'Defeat the holograms!','text':'Event'}]
+        articles,notice=research(client,'Research Defeat the holograms!',[])
+        self.assertTrue(articles); self.assertEqual(notice,'')
+
+    def test_unnamed_requirements_retain_previous_lookup(self):
+        from types import SimpleNamespace
+        resources=SimpleNamespace(_research_topic={'game':'Guild Wars 2','query':'Heart of the Obscure Research'},cached_lookup=MagicMock(return_value=[{'text':'Track'}]))
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Heart of Thorns'})
+        research(client,'What are the specific requirements?',[],resources=resources)
+        self.assertEqual(resources.cached_lookup.call_args.args[1],'Heart of the Obscure Research')
+        client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Gliding'})
+        research(client,'What are the requirements for Gliding?',[],resources=resources)
+        self.assertEqual(resources.cached_lookup.call_args.args[1],'Gliding')
+
+    @patch('waypoint.assistant.research.lookup',side_effect=ValueError('Wiki response exceeded the size limit.'))
+    def test_safe_diagnostic_reason(self,lookup):
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Gliding'})
+        _,notice=research(client,'Research Gliding',[])
+        self.assertIn('wiki response too large',notice)
+
+    @patch('waypoint.assistant.research.lookup')
+    def test_flying_circus_bypasses_timeout_prone_planner(self,lookup):
+        client=MagicMock(); client.complete.side_effect=TimeoutError()
+        lookup.return_value=[{'title':'Flying Circus','text':'Adventure','url':'https://wiki.guildwars2.com/wiki/Flying_Circus'}]
+        articles,notice=research(client,'Hi chat I need Flying Circus achievement in Verdant Brink',[],allowed_sources=('Guild Wars 2',))
+        client.complete.assert_not_called()
+        lookup.assert_called_once_with('Guild Wars 2','Flying Circus')
+        self.assertTrue(articles); self.assertEqual(notice,'')
     @patch('waypoint.assistant.research.lookup')
     def test_gw2_scope_blocks_other_source_before_network(self,lookup):
         client=MagicMock(); client.complete.return_value='{"game":"Minecraft","query":"crafting"}'

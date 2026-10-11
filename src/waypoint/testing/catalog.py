@@ -81,7 +81,7 @@ def catalog_plans(catalog, seed):
             row = rows[index]
             task = {'achievement': 'Explain how to complete this achievement, including prerequisites and whether it is still available',
                     'event': 'Explain where this event happens, its prerequisites, and how to complete it; do not assume it is active now',
-                    'map': 'Help me with map completion here, including what counts, access requirements, and a practical route',
+                    'map': 'First verify whether this is an open-world zone or an encounter instance. For a zone, explain all applicable map-completion objectives and access; for an instance, explain its encounter instead',
                     'mastery': 'Explain this mastery track, its unlock requirements, and how to progress it',
                     'mastery_level': 'Explain how to unlock this mastery level and what it does'}[kind]
             name = row['name'] + (' (track: '+row['track']+')' if row.get('track') else '')
