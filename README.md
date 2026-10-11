@@ -60,7 +60,7 @@ The tester uses Gemma 3 1B to generate player questions and the app’s configur
 
 4. On first launch, select your llama-server.exe and downloaded 1B model, then click Save and start tests. The tester saves its configuration automatically.
 
-No vision projector is needed for the 1B tester. The 'run-gw2-wiki-for-training' trainer requires a previously saved GW2 account connection. The 'run-gw2-wiki-no-account' is recommended to aid new player base. It runs up to three hours, five turns per session, or 1,000 sessions—whichever limit comes first.
+No vision projector is needed for the 1B tester. The `run-gw2-wiki-for-training` trainer requires a previously saved GW2 account connection. The `run-gw2-wiki-no-account` is recommended to help support new player base. It runs up to three hours, five turns per session, or 1,000 sessions—whichever limit comes first.
 
 Run stop-gw2-wiki-for-training.cmd to stop. Active inference finishes before the engines close.
 
