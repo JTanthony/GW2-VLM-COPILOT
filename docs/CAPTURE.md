@@ -49,3 +49,16 @@ Higher-detail test: load 8.17 s, greeting 2.02 s, saved-fixture vision 40.34 s, 
 The controlled native-window test (`tools/verify_window_capture.py`) confirmed that a red selected window remained red in captured pixels while a blue foreground window covered it; minimize blocked frame access; restore produced a new green frame. No real game was captured during that test. Unit tests also cover unchanged frame timestamps, clearing the frame when paused, and session shutdown. Actual GW2 background rendering still needs a player test.
 
 Dependency pins are in `requirements.txt`. Install into the project environment with `.venv\Scripts\python.exe -m pip install -r requirements.txt`. The WGC adapter uses the approved HWND, never title matching or monitor capture. Screenshots remain in memory. Public backend documentation: https://github.com/NiiightmareXD/windows-capture/tree/main/windows-capture-python
+
+
+## Development-only vision review
+
+Standard Windows builds keep captured images in RAM and have no recording control. Packaging excludes the review module; packaged launches reject its development flag.
+
+Source runs can explicitly enable **Record vision (dev)** in the toolbar. Start the engine, select and approve the game window, then play and ask questions. Recording saves captured PNG frames at up to 2 FPS (subject to capture/disk speed) under `local-data/vision-review`, with a JSONL index beside each session's frame folder. It does not start capture or the engine automatically. The optional `run-gw2-vision-review.cmd` enables this same recording mode on source startup.
+
+Frame records carry capture timestamps. Question records link the recent frame at submission; answer/observation records link the actual analyzed frame, including when an earlier observation is reused. A missing frame link is explicitly null rather than claiming visual evidence. Analysis timing and error types are retained. Raw model observations are not proof of screenshot accuracy; reviewers can inspect the linked frames.
+
+Recording is OFF on normal launch. It stops when disabled, on app exit, or after one hour/5 GB of images, whichever comes first. Text log size is capped near 20 MB. Restart recording for a new session. Existing files remain until manually deleted. Saved screenshots can contain private screen information and are not redacted. Credential-like text fields are sanitized and account snapshots excluded. Keep recordings out of Git/releases. This is review-data collection, not automatic model training.
+
+The release privacy rule and source-development exception are maintained in [AGENTS.md](../AGENTS.md).

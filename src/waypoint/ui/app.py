@@ -1,5 +1,5 @@
 """Canonical Waypoint GUI. User-approved continuous capture; no Codex relay or microphone."""
-import argparse,json,queue,threading,time,traceback,base64,re
+import argparse,json,queue,threading,time,traceback,base64,re,sys
 from pathlib import Path
 import tkinter as tk
 from tkinter import font as tkfont,messagebox
@@ -19,7 +19,9 @@ from waypoint.assistant.routing import is_greeting,needs_screen,force_new_analys
 ROOT=data_root()
 ASSETS=app_root()
 class App:
-    def __init__(self,smoke=False):
+    def __init__(self,smoke=False,vision_review=False):
+        if vision_review and getattr(sys,'frozen',False):
+            raise ValueError('Vision review is available only from the development source launcher.')
         self.smoke=smoke
         self.root=tk.Tk(); self.root.title(APP_NAME); self.root.overrideredirect(True)
         self.root.configure(bg=BG); self.root.minsize(360,300)
@@ -33,6 +35,10 @@ class App:
         self.role_font=tkfont.Font(family='Segoe UI',size=self.size,weight='bold')
         self.root.geometry('440x580+100+100'); self.root.attributes('-topmost',True)
         self.root.attributes('-alpha',.96); self.events=queue.Queue(); self.engine=None; self.assistant=None
+        self.review=None
+        if vision_review:
+            from waypoint.storage.vision_review import VisionReview
+            self.review=VisionReview(ROOT); self.review.set_enabled(True)
         self.feed=None; self.feeds=[]; self.inference_lock=threading.Lock(); self.question_pending=threading.Event(); self.last_vision_status=0
         self.busy=False; self.closing=False; self.cancelled=threading.Event(); self.image=None; self.selected_window=None; self.folded=False
         self.shell=tk.Frame(self.root,bg=BG,highlightbackground='#3d5964',highlightthickness=1); self.shell.pack(fill='both',expand=True)
@@ -53,6 +59,10 @@ class App:
         toolbar=tk.Frame(self.body,bg=BG); toolbar.grid(row=0,column=0,sticky='ew',padx=8,pady=5)
         self.select_button=self.button(toolbar,'Select window',self.select_window); self.select_button.pack(side='left')
         self.pause_button=self.button(toolbar,'Pause',self.pause_capture); self.pause_button.pack(side='left',padx=3)
+        if not getattr(sys,'frozen',False):
+            self.recording=tk.BooleanVar(value=vision_review)
+            tk.Checkbutton(toolbar,text='Record vision (dev)',variable=self.recording,command=self.toggle_recording,
+                           bg=BG,fg=TEXT,selectcolor=PANEL,activebackground=BG,font=('Segoe UI',9)).pack(side='left')
         self.button(toolbar,'A+',lambda:self.resize_text(1)).pack(side='right'); self.button(toolbar,'A\u2212',lambda:self.resize_text(-1)).pack(side='right')
         self.status=tk.Label(self.body,text='Start the local engine, then type a question.',bg=BG,fg=MUTED,font=('Segoe UI',9),wraplength=410,anchor='w',justify='left'); self.status.grid(row=1,column=0,sticky='ew',padx=10)
         box=tk.Frame(self.body,bg=BG); box.grid(row=2,column=0,sticky='nsew',padx=8)
@@ -72,6 +82,8 @@ class App:
         self.body.bind('<Configure>',self.fit_body)
         self.root.bind('<Escape>',lambda e:self.fold()); self.root.protocol('WM_DELETE_WINDOW',self.close)
         self.append('Waypoint',WELCOME)
+        if self.review:
+            self.append('Waypoint','Development vision recording enabled: '+str(self.review.directory)+'. Frames and visible text are saved locally, up to one hour or 5 GB.')
         self.chat.yview_moveto(0)
         self.root.after(100,self.poll)
         if smoke:
@@ -173,8 +185,30 @@ class App:
         dialog.transient(self.root); dialog.grab_set()
     def start_feed(self):
         if self.selected_window and self.assistant and not self.feed:
-            self.feed=Feed(self.selected_window,self.assistant,self.inference_lock,self.question_pending,max_width=self.engine.config.get('capture_max_width',1280) if self.engine else 1280)
+            self.feed=Feed(self.selected_window,self.assistant,self.inference_lock,self.question_pending,max_width=self.engine.config.get('capture_max_width',1280) if self.engine else 1280,review_callback=self.record_review if not getattr(sys,'frozen',False) else None,frame_callback=self.record_frame if not getattr(sys,'frozen',False) else None)
             self.feeds.append(self.feed); self.feed.start()
+    def toggle_recording(self):
+        if getattr(sys,'frozen',False): return
+        try:
+            if self.review is None:
+                from waypoint.storage.vision_review import VisionReview
+                self.review=VisionReview(ROOT)
+            self.review.set_enabled(self.recording.get())
+            self.append('Waypoint','Development recording '+('ON: frames and chat saved locally, up to one hour or 5 GB. '+str(self.review.directory) if self.review.enabled else 'OFF. Existing recordings remain locally.'))
+        except OSError:
+            self.recording.set(False); self.append('Waypoint','Could not start development recording.')
+    def record_frame(self,stamp,png):
+        if self.review is None: return
+        try: return self.review.save_frame(stamp,png)
+        except OSError:
+            self.review.set_enabled(False)
+            self.events.put(('review_error','Development recording stopped: storage limit or file-write failure.'))
+    def record_review(self,kind,**values):
+        if self.review is None: return
+        try: self.review.record(kind,**values)
+        except OSError:
+            self.review.set_enabled(False)
+            self.events.put(('review_error','Local review logging stopped because the file could not be written or reached its size limit.'))
     def view_frame(self):
         if not self.feed: self.append('Waypoint','Select and approve a window first.'); return
         try: stamp,png=self.feed.snapshot(max_age=90)
@@ -237,6 +271,7 @@ class App:
         feed=self.feed
         self.question_pending.set()
         def work():
+            observation=None; age=None; observation_stamp=None
             try:
                 if self.cancelled.is_set(): self.events.put(('cancelled',None)); return
                 # Freeze the most recent approved frame before waiting for active inference.
@@ -247,27 +282,38 @@ class App:
                         elif needs_screen(question): raise RuntimeError('Vision is not running. Select the window and start the engine.')
                     except RuntimeError:
                         if needs_screen(question): raise
+                question_frame=frame
+                if question_frame is None and feed and self.review:
+                    try: question_frame=feed.snapshot()
+                    except RuntimeError: pass
+                if question_frame: self.record_frame(*question_frame)
+                self.record_review('question',question=question,frame_stamp=question_frame[0] if question_frame else None)
                 with self.inference_lock:
                     if self.cancelled.is_set(): self.events.put(('cancelled',None)); return
                     if frame:
                         stamp,png=frame
                         self.events.put(('progress','Analyzing screen and answering\u2026'))
-                        observation,age=feed.observation_context(max_age=10) if feed and not force_new_analysis(question) else (None,None)
+                        observation,age,observation_stamp=feed.observation_context(max_age=10,include_stamp=True) if feed and not force_new_analysis(question) else (None,None,None)
                         if observation is None:
+                            self.record_frame(stamp,png); observation_stamp=stamp
                             observation=assistant.observe(png,window_title=target.title if target else '',question=question); age=time.monotonic()-stamp
                         if self.cancelled.is_set(): self.events.put(('cancelled',None)); return
                         answer=assistant.answer(observation,question,window_title=target.title if target else '',progress=lambda text:self.events.put(('progress',text)),observation_age=age)
                     elif image:
-                        answer=assistant.answer(assistant.observe(image),question)
+                        observation=assistant.observe(image)
+                        answer=assistant.answer(observation,question)
                     else:
-                        observation,age=feed.observation_context() if feed and not is_greeting(question) and not is_research_request(question) else (None,None)
+                        observation,age,observation_stamp=feed.observation_context(include_stamp=True) if feed and not is_greeting(question) and not is_research_request(question) else (None,None,None)
                         if observation is not None:
                             answer=assistant.answer(observation,question,window_title=target.title if target else '',progress=lambda text:self.events.put(('progress',text)),observation_age=age)
                         else:
                             research_observation,_=feed.observation_context() if feed and is_research_request(question) else (None,None)
                             answer=assistant.chat(question,window_title=target.title if target else '',progress=lambda text:self.events.put(('progress',text)),vision_state=feed.state() if feed else {'approved':bool(target)},research_observation=research_observation)
+                if not self.cancelled.is_set():
+                    self.record_review('answer',question=question,answer=answer,observation=observation,frame_age_seconds=age,frame_stamp=observation_stamp)
                 self.events.put(('cancelled',None) if self.cancelled.is_set() else ('answer',answer))
             except Exception as exc:
+                self.record_review('answer_error',question=question,error_type=type(exc).__name__,frame_stamp=observation_stamp)
                 log=ROOT/'local-data/gui-errors.log'; log.parent.mkdir(exist_ok=True)
                 with log.open('a',encoding='utf-8') as out: out.write(traceback.format_exc()+'\n')
                 self.events.put(('cancelled',None) if self.cancelled.is_set() else ('error',str(exc)))
@@ -279,6 +325,9 @@ class App:
         try:
             while True:
                 kind,value=self.events.get_nowait()
+                if kind=='review_error':
+                    if hasattr(self,'recording'): self.recording.set(False)
+                    self.append('Waypoint',value); continue
                 if kind=='progress': self.status.configure(text=value); continue
                 if kind=='started': self.engine,self.assistant=value; self.connect.configure(text='Stop engine'); self.status.configure(text='Local engine ready.'); self.start_feed()
                 elif kind=='stopped': self.engine=None; self.assistant=None; self.connect.configure(text='Start engine'); self.status.configure(text='Engine stopped.')
@@ -309,5 +358,7 @@ class App:
         self.status.configure(text='Closing after local work and engine shutdown\u2026')
     def run(self): self.root.mainloop()
 def main():
-    p=argparse.ArgumentParser(); p.add_argument('--smoke',action='store_true'); args=p.parse_args(); App(smoke=args.smoke).run()
+    p=argparse.ArgumentParser(); p.add_argument('--smoke',action='store_true')
+    if not getattr(sys,'frozen',False): p.add_argument('--vision-review',action='store_true',help='Development frame recording and diagnostics')
+    args=p.parse_args(); App(smoke=args.smoke,vision_review=getattr(args,'vision_review',False)).run()
 if __name__=='__main__': main()

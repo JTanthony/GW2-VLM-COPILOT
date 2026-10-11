@@ -3,7 +3,9 @@ import threading,time
 from .graphics import WindowCapture
 
 class Feed:
-    def __init__(self,target,assistant,inference_lock,question_pending,fps=2,max_width=1280):
+    def __init__(self,target,assistant,inference_lock,question_pending,fps=2,max_width=1280,review_callback=None,frame_callback=None):
+        self.review_callback=review_callback
+        self.frame_callback=frame_callback
         self.target=target; self.assistant=assistant; self.inference_lock=inference_lock
         self.question_pending=question_pending; self.interval=1/fps; self.max_width=max_width
         self.stop_event=threading.Event(); self.lock=threading.Lock()
@@ -26,12 +28,12 @@ class Feed:
             if self.observation and time.monotonic()-self.observation[0]<=max_age:
                 return self.observation[1]
         return None
-    def observation_context(self,max_age=90):
+    def observation_context(self,max_age=90,include_stamp=False):
         with self.lock:
             if self.observation:
                 age=time.monotonic()-self.observation[0]
-                if age<=max_age: return self.observation[1],round(age,1)
-        return None,None
+                if age<=max_age: return (self.observation[1],round(age,1),self.observation[0]) if include_stamp else (self.observation[1],round(age,1))
+        return (None,None,None) if include_stamp else (None,None)
     def state(self):
         with self.lock:
             now=time.monotonic()
@@ -47,10 +49,12 @@ class Feed:
             while not self.stop_event.is_set():
                 try:
                     frame=session.snapshot()
+                    new_frame=frame[0]!=seen
                     with self.lock:
                         if frame[0]!=seen:
                             self.frame=frame; self.count+=1; seen=frame[0]
                         self.error=None
+                    if new_frame and self.frame_callback: self.frame_callback(*frame)
                 except Exception as exc:
                     with self.lock: self.frame=None; self.error=str(exc)
                 self.stop_event.wait(.1)
@@ -71,12 +75,18 @@ class Feed:
             if stamp==seen: continue
             with self.inference_lock:
                 if self.stop_event.is_set() or self.question_pending.is_set(): continue
+                analysis_started=time.monotonic()
                 try:
                     with self.lock: self.analyzing=True
+                    if self.frame_callback: self.frame_callback(stamp,png)
                     observation=self.assistant.observe(png,window_title=self.target.title if self.target else '')
                     with self.lock: self.observation=(stamp,observation); self.vision_error=None
+                    if self.review_callback:
+                        self.review_callback('observation',observation=observation,frame_age_seconds=time.monotonic()-stamp,analysis_seconds=round(time.monotonic()-analysis_started,3),frame_stamp=stamp)
                 except Exception as exc:
                     with self.lock: self.vision_error=str(exc)
+                    if self.review_callback:
+                        self.review_callback('vision_error',error_type=type(exc).__name__,analysis_seconds=round(time.monotonic()-analysis_started,3),frame_stamp=stamp)
                 finally:
                     with self.lock: self.analyzing=False
                 seen=stamp

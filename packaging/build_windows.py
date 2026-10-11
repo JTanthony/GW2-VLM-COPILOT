@@ -2,9 +2,16 @@
 import subprocess,sys,shutil,json,hashlib,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup')
+DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog'}
+DEV_FILES={'AGENTS.md','run-gw2-vision-review.cmd','run-gw2-wiki-for-training.cmd',
+           'run-gw2-wiki-no-account.cmd','stop-gw2-wiki-for-training.cmd',
+           'run_text_sessions.py','refresh_gw2_test_catalog.py','benchmark_local.py',
+           'playtest_edges.py','playtest_local.py','verify_window_capture.py'}
 def main():
     build=ROOT/'local-data/package-build'
-    subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--windowed','--name','GW2-VLM-COPILOT','--paths',str(ROOT/'src'),'--collect-all','windows_capture','--icon',str(ROOT/'assets/branding/gw2-vlm-copilot.ico'),'--distpath',str(build/'dist'),'--workpath',str(build/'work'),'--specpath',str(build/'spec'),str(ROOT/'tools/run_gui.py')],cwd=ROOT,check=True)
+    exclusions=[arg for module in DEV_MODULES for arg in ('--exclude-module',module)]
+    subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--windowed',*exclusions,'--name','GW2-VLM-COPILOT','--paths',str(ROOT/'src'),'--collect-all','windows_capture','--icon',str(ROOT/'assets/branding/gw2-vlm-copilot.ico'),'--distpath',str(build/'dist'),'--workpath',str(build/'work'),'--specpath',str(build/'spec'),str(ROOT/'tools/run_gui.py')],cwd=ROOT,check=True)
     return assemble(build/'dist/GW2-VLM-COPILOT')
 def assemble(folder):
     for name in ('gw2-vlm-copilot-24.png','gw2-vlm-copilot-32.png','gw2-vlm-copilot.ico'):
@@ -28,6 +35,8 @@ def assemble(folder):
         if not path.is_file():continue
         if path.name=='PACKAGE-MANIFEST.json':continue
         relative=path.relative_to(folder)
+        if DEV_PATHS.intersection(relative.parts) or path.name in DEV_FILES:
+            raise RuntimeError('Development artifact in package: '+str(relative))
         if any(part in forbidden for part in relative.parts) or path.suffix in ('.gguf','.dpapi','.log') or path.name.endswith('.local.json'):raise RuntimeError('Private artifact in package: '+str(relative))
         manifest.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
     (folder/'PACKAGE-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
