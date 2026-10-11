@@ -68,6 +68,8 @@ Results stay in local-data/text-playtests. Keep account-derived logs private. Th
 
 Once logged an enterprise model such as GPT SOL 6.1 will provide stronger python training rules. Once complete push to upload.
 
+ Vision remains in memory and are never written to disk. Vision training is an optional development tool that records text diagnostics only. It is disabled by default and excluded from the standard Windows release UI.
+
 ## Project documentation
 
 ##### Uninstall the portable app
