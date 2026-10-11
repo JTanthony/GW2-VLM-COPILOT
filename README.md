@@ -64,11 +64,11 @@ No vision projector is needed for the 1B tester. The `run-gw2-wiki-for-training`
 
 Run stop-gw2-wiki-for-training.cmd to stop. Active inference finishes before the engines close.
 
-Results stay in local-data/text-playtests. Keep account-derived logs private. These runs generate material for review; they do not automatically train either model.
+Results stay in `local-data/text-playtests`. Keep account-derived logs private. These runs generate material for review; they do not automatically train either model. 
+
+Vision training is an optional development tool reserved only in the source file launcher. Recordings stay in `local-data/vision-review` and stop after 1 hour minutes or 5 GB. It is disabled by default in the standard Windows release and data is only stored in ram.
 
 Once logged an enterprise model such as GPT SOL 6.1 will provide stronger python training rules. Once complete push to upload.
-
- Vision remains in memory and are never written to disk. Vision training is an optional development tool that records text diagnostics only. It is disabled by default and excluded from the standard Windows release UI.
 
 ## Project documentation
 
