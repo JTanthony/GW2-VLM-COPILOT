@@ -12,6 +12,7 @@ def gw2_topic(query):
     if query.casefold().strip()=='torn from the sky': return 'Torn from the Sky'
     for pattern,title in ((r'wyvern\s+matri?a(?:r)?ch','Legendary Wyvern Matriarch'),
                           (r'fallen\s+masks','Fallen Masks'),
+                          (r'\bflying\s+circus\b','Flying Circus'),
                           (r'\bdug\s+in\b','Torn from the Sky')):
         if re.search(pattern,query,re.I): return title
     return None
@@ -107,7 +108,7 @@ def wiki_json(host,api,params):
 def lookup(game,query):
     if game not in SOURCES: raise ValueError('Choose an approved game source.')
     query=query.strip()
-    if not query or len(query)>160: raise ValueError('Enter wiki search terms of 1â€“160 characters.')
+    if not query or len(query)>160: raise ValueError('Enter wiki search terms of 1\u2013160 characters.')
     if game=='Blish HUD': return blish_documentation()
     host,api,page_path=SOURCES[game]
     params={'action':'query','format':'json','generator':'search','gsrsearch':query,'gsrnamespace':0,
@@ -145,7 +146,7 @@ def context(articles):
             'Distinguish article facts from current screen evidence.\n'+json.dumps(articles,ensure_ascii=False))
 
 def references(articles):
-    return '\n\nSources:\n'+'\n'.join(item['title']+' â€” '+item['url'] for item in articles) if articles else ''
+    return '\n\nSources:\n'+'\n'.join(item['title']+' \u2014 '+item['url'] for item in articles) if articles else ''
 
 def answer_budget(question,articles,history=()):
     if not articles: return 384
@@ -176,7 +177,7 @@ def verified_list(question,articles,history=()):
     sections=[]
     for article in categories:
         names=article['item_names']
-        sections.append(article['title']+f' â€” {len(names)} retrieved names:\n\n'+'\n'.join('- '+name for name in names))
+        sections.append(article['title']+f' \u2014 {len(names)} retrieved names:\n\n'+'\n'.join('- '+name for name in names))
     return '\n\n'.join(sections)+coverage_notice(effective,categories)
 
 
