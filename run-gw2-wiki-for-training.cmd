@@ -5,5 +5,7 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" "tools\run_text_sessions.py" --account-mode saved --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000
+set "TEST_ACCOUNT_MODE=saved"
+if /i "%~1"=="none" set "TEST_ACCOUNT_MODE=none"
+".venv\Scripts\python.exe" "tools\run_text_sessions.py" --account-mode %TEST_ACCOUNT_MODE% --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000
 pause

@@ -6,6 +6,23 @@ from waypoint.testing.text_sessions import scenarios,validate_question,run_sessi
 from waypoint.integrations.accounts import Accounts
 
 class TextSessionTests(unittest.TestCase):
+    def test_observed_helper_questions_are_rejected(self):
+        for question in ('Which zone are you currently in?', 'What aspect are you struggling with?', 'Where are you?', 'I need the achievement name to guide you.'):
+            with self.assertRaises(ValueError): validate_question(question)
+        self.assertEqual(validate_question('Where should I go next?'),'Where should I go next?')
+
+    def test_location_clarification_uses_supplied_persona(self):
+        player=MagicMock()
+        prompt=json.dumps({'simulated_player':{'location':'Verdant Brink','preference':'I prefer solo exploration.'}})
+        question,note=next_question(player,prompt,[{'question':'Help me explore','answer':'Which zone are you currently in?'}],2)
+        self.assertIn('I am in Verdant Brink',question)
+        player.complete.assert_not_called()
+
+    def test_fallback_preserves_original_goal(self):
+        player=MagicMock(); player.complete.return_value=json.dumps({'question':"How do I complete 'Shadows of the Wild'?"})
+        question,note=next_question(player,json.dumps({'original_player_question':'Help me complete Dug In.'}),[],2)
+        self.assertIn('Dug In',question); self.assertIn('unsupported',note)
+
     def test_player_invented_quoted_topic_recovers(self):
         player=MagicMock(); player.complete.return_value=json.dumps({'question':'How do I finish "Imaginary Quest"?'})
         question,note=next_question(player,'Verdant Brink',[],1)

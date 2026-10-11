@@ -9,13 +9,26 @@ from waypoint.assistant.local import Assistant
 from waypoint.integrations.accounts import Accounts
 from waypoint.integrations.credentials import CredentialStore
 from waypoint.storage.resources import Resources
-from waypoint.testing.text_sessions import PLAYER_GUIDANCE,run_sessions,title_scenarios
+from waypoint.testing.text_sessions import PLAYER_GUIDANCE,run_sessions,title_scenarios,validate_question
+from waypoint.testing.catalog import catalog_plans,mix_plans
+
+def test_accounts(mode,game,out):
+    if mode=='saved':
+        accounts=Accounts(); accounts.select_game(game); accounts.connect('',game)
+        return accounts
+    accounts=Accounts(CredentialStore(Path(out)/'isolated-credentials'))
+    accounts.select_game(game)
+    if mode=='dummy':
+        accounts.names={1:'Synthetic Trial',2:'Synthetic Explorer'}
+        accounts.snapshot={'fetched_at':datetime.now(timezone.utc).isoformat(),'records':[{'id':1,'done':False,'current':10,'max':10},{'id':2,'done':True,'current':5,'max':5}]}
+    return accounts
 
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--sessions',type=int,default=1000); parser.add_argument('--turns',type=int,default=4)
     parser.add_argument('--hours',type=float,default=8); parser.add_argument('--delay',type=float,default=1)
-    parser.add_argument('--account-mode',choices=['dummy','saved'],default='dummy')
+    parser.add_argument('--account-mode',choices=['none','dummy','saved'],default='dummy')
+    parser.add_argument('--seed',type=int,default=None,help='Repeat a catalog sampling order using a saved seed')
     parser.add_argument('--game',default='Guild Wars 2'); args=parser.parse_args()
     if args.game!='Guild Wars 2': parser.error('Account/API testing uses Guild Wars 2 only. This batch is focused on GW2 wiki and account progress.')
     if not 1<=args.sessions<=10000 or not 1<=args.turns<=20 or not 0<args.hours<=8 or not 0<=args.delay<=60:
@@ -47,21 +60,33 @@ def main():
                 if probe.connect_ex(('127.0.0.1',port))==0: parser.error('Previous engines are still active. Let the stop finish before starting another run.')
         (parent/'STOP').unlink()
     out=parent/datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f'); out.mkdir(parents=True)
-    if args.account_mode=='saved':
-        accounts=Accounts(); accounts.select_game(args.game)
-        # Normal app credential use only: no token is printed, logged or passed to either model.
-        accounts.connect('',args.game)
-    else:
-        accounts=Accounts(CredentialStore(out/'dummy-credentials')); accounts.select_game(args.game)
-        if args.game!='Guild Wars 2': parser.error('Dummy progress fixture currently uses the GW2 adapter. Choose saved mode for another supported adapter.')
-        accounts.names={1:'Synthetic Trial',2:'Synthetic Explorer'}
-        accounts.snapshot={'fetched_at':datetime.now(timezone.utc).isoformat(),'records':[{'id':1,'done':False,'current':10,'max':10},{'id':2,'done':True,'current':5,'max':5}]}
+    accounts=test_accounts(args.account_mode,args.game,out)
     player_config=json.loads((ROOT/'config/player.local.json').read_text('utf-8'))
     copilot_config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8')); copilot_config.pop('projector_path',None)
     (out/'run-info.json').write_text(json.dumps({'account_mode':args.account_mode,'game':accounts.selected_game,'snapshot_time':accounts.snapshot.get('fetched_at') if accounts.snapshot else None,'player_model':'Gemma 3 1B IT Q4_K_M','capture':False,'sessions_limit':args.sessions,'hours_limit':args.hours},indent=2),encoding='utf-8')
     titles=json.loads((ROOT/'src/waypoint/testing/test_titles.json').read_text('utf-8'))
     titles=[title for title in titles if title['game']=='Guild Wars 2']
     plans=title_scenarios(accounts,titles)
+    catalog_path=ROOT/'local-data/test-catalog/gw2-public.json'
+    if catalog_path.is_file():
+        import secrets
+        seed=args.seed if args.seed is not None else secrets.randbits(32)
+        catalog=json.loads(catalog_path.read_text('utf-8'))
+        sampled=[]; excluded=[]
+        for plan in catalog_plans(catalog,seed):
+            try: validate_question(plan['starter'])
+            except ValueError:
+                excluded.append({'scenario':plan['name'],'reason':'Existing question privacy/length guard'})
+                continue
+            sampled.append(plan)
+        plans=mix_plans(plans,sampled)
+        (out/'catalog-selection.json').write_text(json.dumps({'seed':seed,'catalog_fetched_at':catalog['fetched_at'],
+            'coverage':catalog['coverage'],'excluded':excluded,'plans':plans[:args.sessions]},ensure_ascii=False,indent=2),encoding='utf-8')
+        print(f'Public catalog enabled: {len(catalog["records"])} names; sampling seed {seed}',flush=True)
+        if any(v.get('error') or v.get('missing_ids') for v in catalog['coverage'].values()):
+            print('Catalog coverage is partial; see catalog-selection.json for missing IDs or failed categories.',flush=True)
+    else:
+        print('Public catalog missing; using fixed scenarios. Run tools/refresh_gw2_test_catalog.py to add public names.',flush=True)
     def make_assistant(session):
         game=plans[session%len(plans)]['game']
         resources=Resources(out/'resources'/str(session)); resources.select('my game is '+game)

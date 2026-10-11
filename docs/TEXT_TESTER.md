@@ -55,3 +55,24 @@ The goal is to keep players in the game. Review whether answers include actionab
 Observed total GPU memory while both engines were running was 5,253 MiB out of 8,192 MiB, with 2,772 MiB free. This establishes that this text-only configuration ran concurrently during the short check, not that every workload or an additional running game will fit. The small model was configured with CPU device and no GPU KV offload. No eight-hour endurance run or live authenticated account test was performed during setup. Both owned engines stopped at the session limit.
 
 The checked run's debrief is `local-data/text-playtests/20261009-181927-881274/debrief.md`. Full questions, answers and timings remain beside it. Real API mode requires a saved token and uses the normal reviewed account adapter; it was not used for this dummy-data check.
+
+
+## Wiki-only testing without an account
+
+Run **run-gw2-wiki-no-account.cmd** for the same three-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
+
+Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000`.
+
+## October 11 simulated-player improvements
+
+The 1B player prompt now retains the original goal and two recent exchanges, answers clarification questions as the player, and rejects more helper-role questions and unsupported quoted names. Controlled fallback questions repeat the original request. Three general GW2 scenarios (quick achievement wins, zone completion research, and short-session planning) supply a fictional Verdant Brink/solo exploration/20-minute persona; location clarifications use those supplied facts. This persona is test input, not account evidence. Specific achievement scenarios do not inherit that location. These changes improve test generation, not model weights. Restart the tester to load them. Fourteen text-session tests passed; live model quality still needs a new run.
+
+## Public GW2 name pool
+
+Refresh with `.venv\Scripts\python.exe tools\refresh_gw2_test_catalog.py`. This downloads English public achievements, event names, maps, mastery tracks and individual mastery levels from api.guildwars2.com without an account token or model startup. The cache is `local-data/test-catalog/gw2-public.json`, excluded from Git. Failed refreshes preserve the previous cache.
+
+Both test launchers automatically use the cache when present, mixing three catalog scenarios with one fixed regression scenario. Only one selected record and recent dialogue enter each player prompt. `catalog-selection.json` in each run saves the selected plans, catalog date, coverage and random seed; `--seed NUMBER` repeats the order with the same catalog. Missing caches produce an explicit notice and retain fixed tests.
+
+Coverage means names returned by the public endpoints, not proof of availability or ownership. Missing achievement/map/mastery IDs are recorded. The legacy v1 event catalog may omit newer events. Map-completion questions use public map names; this does not enumerate every vista, heart, waypoint or point of interest. Mastery tracks and their levels are both included. Retired, hidden or gated content may appear: questions explicitly require research of availability and prerequisites rather than assuming access. The 12B copilot still obtains instructions through its usual official-wiki lookup; catalog names are not answer keys.
+
+Initial October 11 catalog: 8,357 named achievements, 5,298 named events, 1,085 named maps (122 public maps used for completion questions), 40 mastery tracks and 193 mastery levels. Blank names are omitted. The event-names endpoint returned 503, so the public event-details endpoint supplied event names instead; the refresh tool now supports this fallback. Three achievement starters currently trigger the existing privacy guard (Egg Bearer, Lost Password, Password Guesser); their names remain in the catalog but test selection excludes them and records the exclusion. Partial first downloads record missing IDs/errors; incomplete refreshes preserve an existing cache.

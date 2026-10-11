@@ -47,3 +47,10 @@ No trainer or validated recipe is shipped. Begin with [Google's tuning guidance]
 8. Publish adapter/model/dataset provenance and compatible licenses separately; never commit weights or private data here. Clearly label reported results as measured, not simulated.
 
 Contributions should state the problem, evidence, exact change and checks. Do not claim training, accuracy gains or speed gains without the corresponding measured experiment.
+
+
+## Wiki-only testing without an account
+
+Run **run-gw2-wiki-no-account.cmd** for the same three-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
+
+Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000`.

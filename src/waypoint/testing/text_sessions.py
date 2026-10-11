@@ -10,7 +10,10 @@ PLAYER_GUIDANCE=(
     'Generate ONLY your next player question, never a helper reply. Never ask what the assistant wants to accomplish or what its goals are. '
     'Examples: "Can you help me decide what to do next?" "Does that mean I have completed it?" "I prefer exploration. Which option fits that?" '
     'Respond with JSON containing question. Keep it short, natural and relevant to the given scenario and last reply. '
-    'Ask follow-up questions, clarify confusing replies, change a goal or challenge a progress claim. '
+    'Keep the original player goal throughout this session. Do not adopt an unrelated topic suggested by the assistant. '
+    'If asked for your location, goal or preferences, answer using the supplied simulated_player facts or original question before asking a follow-up. '
+    'These facts are a fictional test persona, never evidence of real account progress. If a fact is missing, say you do not know it. '
+    'Never ask the assistant where it is, what it is struggling with, or which achievement it means. You are the player seeking help. '
     'Your goal is to keep playing the specified MMO, RPG or ARPG while getting practical answers here. Use title_focus to ask about relevant game systems. Clarify version, season or spoiler preferences when needed. '
     'Use the current followup_intent. React to the last answer rather than blindly repeating it. Ask for missing steps when an answer is vague or sends you to a website. '
     'Use only game, location and achievement names supplied in the scenario or conversation. If none are known, ask for suggestions or clarification. '
@@ -23,18 +26,25 @@ QUESTION_SCHEMA={'type':'object','properties':{'question':{'type':'string'}},'re
 def validate_question(question):
     if not isinstance(question,str) or not 1<=len(question.strip())<=500 or sensitive(question):
         raise ValueError('Generated question failed privacy or length checks.')
-    if re.search(r'(?i)\b(?:what|which).{0,90}\b(?:you (?:want|hope|plan)|do you (?:enjoy|prefer|like)|are you (?:hoping|looking))\b|\b(?:could|can) you tell me the name.{0,70}you(?:\x27|’)?re looking',question):
+    if re.search(r'(?i)\b(?:what|which).{0,90}\b(?:you (?:want|hope|plan)|do you (?:enjoy|prefer|like)|are you (?:hoping|looking|currently|struggling|focusing|primarily))\b|\b(?:could|can) you tell me the name.{0,70}you(?:\x27|’)?re looking|\bwhere are you\b|\bI need.{0,60}\bto (?:guide|help) you\b',question):
         raise ValueError('Generated question used the helper role instead of the player role.')
     return question.strip()
 
 def next_question(player,prompt,dialogue,turn):
     """Keep duplicate/truncated small-model output from wasting an entire session."""
     note=None
+    try: context=json.loads(prompt)
+    except (ValueError,TypeError): context={}
+    persona=context.get('simulated_player',{})
+    last_answer=dialogue[-1].get('answer','') if dialogue else ''
+    if persona.get('location') and re.search(r'(?i)(?:which|what) (?:zone|map|area).{0,50}(?:you|in)|where are you',last_answer):
+        return ('I am in '+persona['location']+'. '+persona['preference']+' What should I do next?',
+                'Answered location clarification using the supplied test persona')
     try:
         question=validate_question(json.loads(player.complete(prompt,schema=QUESTION_SCHEMA,max_tokens=192))['question'])
         # Quoted new names are especially likely to be invented by the tiny
         # player model. Keep them out of tests unless present in its context.
-        names=re.findall(r'[\"\u201c\u2018]([^\"\u201d\u2019]{3,80})[\"\u201d\u2019]',question)
+        names=re.findall(r'[\"\u201c\u2018\x27]([^\"\u201d\u2019\x27]{3,80})[\"\u201d\u2019\x27]',question)
         if any(name.casefold() not in prompt.casefold() for name in names):
             note='Player model introduced an unsupported named topic; used a controlled follow-up'
         normalize=lambda value: re.sub(r'[^a-z0-9]','',value.casefold())
@@ -52,6 +62,9 @@ def next_question(player,prompt,dialogue,turn):
                  'Which parts of that plan can I do alone, and what is still uncertain?',
                  'What important detail is missing before you can give me a reliable guide?')
         question=options[(turn-1)%len(options)]
+        original=context.get('original_player_question','')
+        if original:
+            question='My original request is: '+original[:300]+' '+question
     return question,note
 
 def scenarios(accounts):
@@ -86,10 +99,11 @@ def title_scenarios(accounts,titles):
             for plan in focused: plan['game']='Guild Wars 2'
             base=focused+base
         for plan in base:
+            if not context.snapshot and plan['name']=='GW2 dated account versus wiki': continue
             if plan['name'] in title.get('skip',[]): continue
             if not matched and plan['name']=='saved goal versus progress': continue
             plan['title_focus']=title['focus']; plan['account_evidence_available']=bool(matched and accounts.snapshot)
-            if not matched:
+            if not matched or not context.snapshot:
                 plan['starter']=plan['starter'].replace('my account progress','my stated goals').replace('my unfinished progress','my goals')
                 if plan['name']=='progress did not count':
                     plan['starter']='An achievement step did not count. What common requirements should I check before repeating it?'
@@ -132,7 +146,8 @@ def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=
                         intents=plan.get('followups',['Ask for the next useful action or clarify a missing detail.'])
                         turn_started=time.monotonic()
                         compact_plan={k:v for k,v in plan.items() if k not in ('followups','starter')}
-                        prompt=json.dumps({'scenario':compact_plan,'original_player_question':plan['starter'],'followup_intent':intents[max(0,turn-1)%len(intents)],'previous_turns':dialogue[-1:]},ensure_ascii=False)
+                        persona={'location':'Verdant Brink','preference':'I prefer solo exploration and have 20 minutes.'} if plan['game']=='Guild Wars 2' and plan['name'] in ('quick achievement wins','zone completion research','short-session planning') else {}
+                        prompt=json.dumps({'scenario':compact_plan,'simulated_player':persona,'original_player_question':plan['starter'],'followup_intent':intents[max(0,turn-1)%len(intents)],'previous_turns':dialogue[-2:]},ensure_ascii=False)
                         question=validate_question(plan['starter']) if turn==0 else None
                         if turn:
                             question,note=next_question(player,prompt,dialogue,turn)
