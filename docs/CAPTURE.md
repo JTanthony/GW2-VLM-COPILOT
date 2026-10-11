@@ -55,7 +55,7 @@ Dependency pins are in `requirements.txt`. Install into the project environment 
 
 Standard Windows builds keep captured images in RAM and have no recording control. Packaging excludes the review module; packaged launches reject its development flag.
 
-Source runs can explicitly enable **Record vision (dev)** in the toolbar. Start the engine, select and approve the game window, then play and ask questions. Recording saves captured PNG frames at up to 2 FPS (subject to capture/disk speed) under `local-data/vision-review`, with a JSONL index beside each session's frame folder. It does not start capture or the engine automatically. The optional `run-gw2-vision-review.cmd` enables this same recording mode on source startup.
+Source runs can explicitly enable **Record vision (dev)** in the toolbar. Start the engine, select and approve the game window, then play and ask questions. Recording saves captured PNG frames at up to 2 FPS (subject to capture/disk speed) under `local-data/vision-review`, with a JSONL index beside each session's frame folder. It does not start capture or the engine automatically. The optional `run-gw2-vision-training.cmd` enables this same recording mode on source startup.
 
 Frame records carry capture timestamps. Question records link the recent frame at submission; answer/observation records link the actual analyzed frame, including when an earlier observation is reused. A missing frame link is explicitly null rather than claiming visual evidence. Analysis timing and error types are retained. Raw model observations are not proof of screenshot accuracy; reviewers can inspect the linked frames.
 
