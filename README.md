@@ -12,13 +12,15 @@ Designed for **Gemma 4 12B QAT Q4_0**, the recommended model for chat and vision
 
 1. Extract the entire app ZIP into its own folder. Keep `_internal`, `assets`, and `docs` beside `GW2-VLM-COPILOT.exe`. The included `Models` folder is where you put your model and engine downloads; no model weights are bundled.
 
-2. Download BOTH ZIPs below. Extract the server ZIP, then place its extracted `llama-b11512-bin-win-cuda-12.4-x64` folder inside the app's `Models` folder. Open that extracted folder and locate `llama-server.exe`.
+2. Download BOTH ZIPs below. 
 
-   Server: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip)
+Server: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/llama-b11512-bin-win-cuda-12.4-x64.zip)
 
-   Required CUDA libraries: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip)
+Extract the server ZIP, then place its extracted `llama-b11512-bin-win-cuda-12.4-x64` folder inside the app's `Models` folder.
 
-   Extract the CUDA libraries ZIP separately. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted server folder.
+Required CUDA libraries: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip)
+
+Extract the CUDA libraries. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted server folder.
 
 Keep your NVIDIA driver installed and current.
 
