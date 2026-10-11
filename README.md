@@ -18,17 +18,19 @@ Designed for **Gemma 4 12B QAT Q4_0**, the recommended model for chat and vision
 
    Required CUDA libraries: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip)
 
-   Extract the CUDA libraries ZIP separately. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted server folder, directly beside `llama-server.exe`. Copy the DLL files themselves, not their enclosing folder. Keep all the server's  original DLLs too. Do not select an executable inside a ZIP. Keep your NVIDIA driver installed and current.
+   Extract the CUDA libraries ZIP separately. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted server folder.
 
-3. Download these two files directly into the app's `Models` folder. Allow about 7.2 GB for them. The 12B model handles both chat and vision; its projector is the companion file that lets it read images, not a second chat model. The optional Gemma 3 1B development tester is not needed to use the app. If you want to help improve the project through testing, see [the development notes](docs/DEVELOPMENT.md).
+Keep your NVIDIA driver installed and current.
+
+4. Download these two files directly into the app's `Models` folder. Allow about 7.2 GB for them. The 12B model handles both chat and vision; its projector is the companion file that lets it read images, not a second chat model. The optional Gemma 3 1B development tester is not needed to use the app. If you want to help improve the project through testing, see [the development notes](docs/DEVELOPMENT.md).
 
    Model (`gemma-4-12B-it-QAT-Q4_0.gguf`): [https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/gemma-4-12B-it-QAT-Q4_0.gguf?download=true](https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/gemma-4-12B-it-QAT-Q4_0.gguf?download=true)
 
    Matching projector (`mmproj-gemma-4-12B-it-QAT-BF16.gguf`): [https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/mmproj-gemma-4-12B-it-QAT-BF16.gguf?download=true](https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/resolve/main/mmproj-gemma-4-12B-it-QAT-BF16.gguf?download=true)
 
-4. Open `GW2-VLM-COPILOT.exe`. In setup, Browse to the extracted `llama-server.exe`, the model, and its matching projector. Click **Save and open app**, then **Start engine**. Close other copilot engines first to free the GPU and port.
+5. Open `GW2-VLM-COPILOT.exe`. In setup, Browse to the extracted `llama-server.exe`, the model, and its matching projector. Click **Save and open app**, then **Start engine**. Close other copilot engines first to free the GPU and port.
 
-5. Try ordinary chat first. For vision, click **Select window**, choose GW2, and approve capture. Keep the game restored; minimizing pauses capture.
+6. Try ordinary chat first. For vision, click **Select window**, choose GW2, and approve capture. Keep the game restored; minimizing pauses capture.
 
 This download recipe targets Windows x64 with an NVIDIA GPU. Hardware affects loading and response speed; other GPU backends require a compatible llama.cpp build and have not been validated here. If the engine exits, check `%LOCALAPPDATA%\GW2 VLM COPILOT\local-data\engine.log`. To change files later, launch `GW2-VLM-COPILOT.exe --setup`.
 
@@ -56,11 +58,13 @@ The tester uses Gemma 3 1B to generate player questions and the app’s configur
 
 4. On first launch, select your llama-server.exe and downloaded 1B model, then click Save and start tests. The tester saves its configuration automatically.
 
-No vision projector is needed for the 1B tester. The default batch requires a previously saved GW2 account connection. It runs up to three hours, five turns per session, or 1,000 sessions—whichever limit comes first.
+No vision projector is needed for the 1B tester. The default batch requires a previously saved GW2 account connection. The no account test is recommended to aid new player base. It runs up to three hours, five turns per session, or 1,000 sessions—whichever limit comes first.
 
 Run stop-gw2-wiki-for-training.cmd to stop. Active inference finishes before the engines close.
 
 Results stay in local-data/text-playtests. Keep account-derived logs private. These runs generate material for review; they do not automatically train either model.
+
+Once logged an enterprise model such as GPT SOL 6.1 will provide stronger python training rules. Once complete push to upload.
 
 ## Project documentation
 
