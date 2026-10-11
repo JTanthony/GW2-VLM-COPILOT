@@ -19,7 +19,7 @@ Copy-Item config/player.example.json config/player.local.json
 .\.venv\Scripts\python.exe tools/run_text_sessions.py --sessions 4 --turns 4 --hours 0.2 --account-mode dummy
 ```
 
-Dummy records are synthetic, not real GW2 achievements; do not judge invented dummy-name mechanics as real guides. Saved mode uses your previously connected GW2 account and creates private snapshot-derived logs. `run-gw2-wiki-for-training.cmd` uses saved mode for Guild Wars 2 with five turns per session, up to 1,000 sessions or three hours, whichever comes first. The launcher name refers to preparing and reviewing test material; it does not train model weights. stop-gw2-wiki-for-training.cmd requests a stop between inferences; wait for both engines before restarting.
+Dummy records are synthetic, not real GW2 achievements; do not judge invented dummy-name mechanics as real guides. Saved mode uses your previously connected GW2 account and creates private snapshot-derived logs. `run-gw2-wiki-for-training.cmd` uses saved mode for Guild Wars 2 with five turns per session, up to 1,000 sessions or eight hours, whichever comes first. The launcher name refers to preparing and reviewing test material; it does not train model weights. stop-gw2-wiki-for-training.cmd requests a stop between inferences; wait for both engines before restarting.
 
 Local reports are under local-data/text-playtests. seconds measures the copilot answer; player_seconds measures question preparation; total_seconds measures the full successful turn, excluding the configured inter-turn delay. Flags are review suggestions, not correctness scores.
 
@@ -51,6 +51,6 @@ Contributions should state the problem, evidence, exact change and checks. Do no
 
 ## Wiki-only testing without an account
 
-Run **run-gw2-wiki-no-account.cmd** for the same three-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
+Run **run-gw2-wiki-no-account.cmd** for the same eight-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
 
-Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000`.
+Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 8 --turns 5 --sessions 1000`.

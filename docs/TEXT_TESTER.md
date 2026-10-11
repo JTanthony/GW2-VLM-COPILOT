@@ -12,7 +12,7 @@ Close GW2 VLM COPILOT with the close button before running this test, so its loc
 
 Double-click **stop-gw2-wiki-for-training.cmd** to request a stop. The current inference finishes before both owned engines close. A new explicit launch clears the stop flag only after both engine ports are free; starting too early shows a message. Existing app engines are never reused or stopped by this runner.
 
-The training launcher sets limits of 1,000 sessions, five turns each and at most three hours, whichever comes first. The command-line runner defaults to four turns and eight hours unless overridden. Despite the launcher name, this is testing and preparation of review material; neither model is trained automatically. Three generation/request errors stop the run early. This batch uses only the official GW2 wiki. Gemma 12B plans the lookup and reasons over the returned plain-text extracts; Gemma 3 generates player follow-up questions. No website commands or downloads are executed. Test goals and notes are isolated under the report directory, not the player's normal project resources.
+The training launcher sets limits of 1,000 sessions, five turns each and at most eight hours, whichever comes first. The command-line runner defaults to four turns and eight hours unless overridden. Despite the launcher name, this is testing and preparation of review material; neither model is trained automatically. Three generation/request errors stop the run early. This batch uses only the official GW2 wiki. Gemma 12B plans the lookup and reasons over the returned plain-text extracts; Gemma 3 generates player follow-up questions. No website commands or downloads are executed. Test goals and notes are isolated under the report directory, not the player's normal project resources.
 
 For a short check with dummy account records:
 
@@ -59,9 +59,9 @@ The checked run's debrief is `local-data/text-playtests/20261009-181927-881274/d
 
 ## Wiki-only testing without an account
 
-Run **run-gw2-wiki-no-account.cmd** for the same three-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
+Run **run-gw2-wiki-no-account.cmd** for the same eight-hour GW2 wiki batch without an API connection or synthetic account progress. It uses an isolated empty credential store and does not load, disconnect or delete your normal saved token. Account-dependent starters are skipped or adapted to stated goals. Both model configurations are still required. Stop with **stop-gw2-wiki-for-training.cmd** and wait for previous engines to exit before starting either mode. Reports record `account_mode: none` in `run-info.json`. The original training launcher continues to use saved-account mode.
 
-Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 3 --turns 5 --sessions 1000`.
+Command-line equivalent: `.venv\Scripts\python.exe tools/run_text_sessions.py --account-mode none --game "Guild Wars 2" --hours 8 --turns 5 --sessions 1000`.
 
 ## October 11 simulated-player improvements
 
