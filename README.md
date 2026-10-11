@@ -20,7 +20,7 @@ Extract the server ZIP, then place its extracted `llama-b11512-bin-win-cuda-12.4
 
 Required CUDA libraries: [https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip](https://github.com/ggml-org/llama.cpp/releases/download/b11512/cudart-llama-bin-win-cuda-12.4-x64.zip)
 
-Extract the CUDA libraries. Copy its three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted server folder.
+Extract the CUDA libraries. Copy the three files (`cublas64_12.dll`, `cublasLt64_12.dll`, and `cudart64_12.dll`) into the  extracted `llama-b11512-bin-win-cuda-12.4-x64` server folder.
 
 Keep your NVIDIA driver installed and current.
 
