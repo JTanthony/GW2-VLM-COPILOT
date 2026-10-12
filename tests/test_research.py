@@ -177,3 +177,14 @@ class ResearchTests(unittest.TestCase):
         for question in ('What can I do?', 'What comes next?', 'What is required?'):
             assistant.chat(question,articles=[])
         self.assertIn('I have 20 minutes',client.complete.call_args.args[0])
+
+    def test_explicit_catalog_name_overrides_speculative_planner(self):
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Griffon'})
+        with patch('waypoint.assistant.research.lookup',return_value=[{'text':'Fishing evidence'}]) as fetch:
+            research(client,"I'm playing Guild Wars 2. Explain how to unlock this mastery level and what it does: Fishing on a Full Tank (track: Fishing). Research the official wiki.",[])
+        fetch.assert_called_once_with('Guild Wars 2','Fishing on a Full Tank')
+
+    def test_negative_source_request_has_no_footer(self):
+        client=MagicMock(); client.complete.return_value='Night boss details.'
+        result=Assistant(client).chat('Explain without a long sources footer.',articles=[{'title':'Night','text':'Details','url':'https://wiki.guildwars2.com/wiki/Night'}])
+        self.assertNotIn('Sources:',result)

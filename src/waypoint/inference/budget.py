@@ -24,11 +24,16 @@ def compact(prompt,level):
         if isinstance(text,str):
             passages=re.split(r'(?<=[.!?])\s+|\n+',text)
             ranked=sorted(enumerate(passages),key=lambda p:-len(terms & set(re.findall(r'\w{3,}',p[1].lower()))))
-            selected=[]; used=0; limit={1:2200,2:1000,3:400}[level]
+            selected=[]; limit={1:2200,2:1000,3:400}[level]
+            focused=[row for row in item.pop('focus_text','').splitlines() if len(row)<=limit]
+            preserved=[]; used=0
+            for row in focused:
+                if used+len(row)+1<=limit: preserved.append(row); used+=len(row)+1
             for index,passage in ranked:
                 if used+len(passage)<=limit:
                     selected.append((index,passage)); used+=len(passage)
-            item['text']='\n'.join(p for _,p in sorted(selected))
+            item['text']='\n'.join(preserved+[p for _,p in sorted(selected)])
+            item['details_truncated']=True
         # Large lists have a separate deterministic answer path; avoid flooding
         # model requests with duplicate category metadata.
         for key in ('item_names','items'): item.pop(key,None)

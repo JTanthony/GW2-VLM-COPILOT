@@ -17,6 +17,24 @@ def gw2_topic(query):
         if re.search(pattern,query,re.I): return title
     return None
 
+def named_subject(question):
+    """Extract an explicitly supplied task name, not a guessed location."""
+    patterns=(r'(?i)(?:whether it is still available|what it does|its encounter instead|active now):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
+              r'(?i)\b(?:achievement|mastery|event)\s+(?:called|named)\s+["“]?([^"”?.]+)')
+    for pattern in patterns:
+        match=re.search(pattern,question)
+        if match:
+            subject=match.group(1).strip(' ."')
+            if 1<=len(subject)<=120: return subject
+    return None
+
+def wants_sources(question):
+    if re.search(r'(?i)\b(?:without|no|omit|remove|stop|don.t|do not)\b.{0,45}\b(?:sources?|links?|references?|citations?|cite)\b',question): return False
+    return bool(re.search(r'(?i)\b(sources?|links?|references?|cite|citations?)\b',question))
+
+def exact_subject(query):
+    return re.sub(r'(?i)\s+(?:achievement|mastery(?: track)?|map completion objectives|requirements)(?:\s+.*)?$','',query).strip()
+
 class ArticleText(HTMLParser):
     def __init__(self):
         super().__init__(); self.article=0; self.blocked=0; self.parts=[]
@@ -64,7 +82,7 @@ class WikiText(HTMLParser):
     """Convert API article fragments, including tables, into inert text."""
     def __init__(self):
         super().__init__(); self.blocked=0; self.parts=[]; self.headers=[]; self.heading=None
-        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None
+        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None; self.row_cells=None; self.cell=None; self.columns=[]; self.rows=[]; self.section=''; self.section_parts=None; self.fields=[]
     def handle_starttag(self,tag,attrs):
         classes=dict(attrs).get('class','').split()
         if self.skipped_divs:
@@ -75,11 +93,17 @@ class WikiText(HTMLParser):
             return
         if tag in ('script','style','nav'): self.blocked+=1
         if self.blocked or self.skipped_divs: return
+        if tag in ('h2','h3'): self.section_parts=[]
+        if tag=='img':
+            label=dict(attrs).get('alt','').strip()
+            if re.fullmatch(r'(?i)(?:gold|silver|copper)(?: coin)?',label): self.handle_data('['+label.lower()+']')
         if tag=='tr':
+            self.row_cells=[]
             self.achievement_row=bool(re.fullmatch(r'achievement\d+',dict(attrs).get('data-id','')))
             self.first_heading=True
         if tag in ('p','tr','li','h2','h3'): self.parts.append('\n')
-        if tag in ('td','th'): self.parts.append(' | ')
+        if tag in ('td','th'):
+            self.parts.append(' | '); self.cell=[]
         if tag=='th': self.heading=[]
     def handle_endtag(self,tag):
         if tag in ('script','style','nav'): self.blocked=max(0,self.blocked-1); return
@@ -87,6 +111,18 @@ class WikiText(HTMLParser):
             if tag==self.skipped_tag: self.skipped_divs-=1
             return
         if self.blocked: return
+        if tag in ('h2','h3') and self.section_parts is not None:
+            self.section=' '.join(self.section_parts).strip(); self.section_parts=None
+        if tag in ('td','th') and self.cell is not None:
+            if self.row_cells is not None: self.row_cells.append(' '.join(self.cell).strip())
+            self.cell=None
+        if tag=='tr' and self.row_cells:
+            if len(self.row_cells)==2 and self.row_cells[0].casefold() in ('region','track','tier','experience'):
+                self.fields.append(self.row_cells[0]+': '+self.row_cells[1])
+            if any(re.search(r'(?i)\b(?:xp required|experience|reward tier|points)\b',c) for c in self.row_cells): self.columns=list(self.row_cells)
+            elif self.columns and len(self.row_cells)==len(self.columns):
+                self.rows.append({'section':self.section,'cells':list(self.row_cells),'columns':list(self.columns)})
+            self.row_cells=None
         if tag=='th' and self.heading is not None:
             value=' '.join(self.heading).strip()
             if value and value not in self.headers: self.headers.append(value)
@@ -100,6 +136,8 @@ class WikiText(HTMLParser):
         if not self.blocked and not self.skipped_divs and data.strip():
             value=' '.join(data.split()); self.parts.append(value+' ')
             if self.heading is not None: self.heading.append(value)
+            if self.cell is not None: self.cell.append(value)
+            if self.section_parts is not None: self.section_parts.append(value)
 
 def wiki_json(host,api,params):
     connection=PinnedHTTPS(host,timeout=12,context=ssl.create_default_context())
@@ -146,7 +184,22 @@ def lookup(game,query):
     params={'action':'query','format':'json','generator':'search','gsrsearch':query,'gsrnamespace':0,
             'gsrlimit':2,'prop':'extracts','explaintext':1,'exchars':6000,'formatversion':2}
     topic=gw2_topic(query) if game=='Guild Wars 2' else None
-    result=({'query':{'pages':[{'title':topic}]}} if topic else wiki_json(host,api,params))
+    subject=exact_subject(query)
+    regional={'Turtle Mount':'End of Dragons mastery tracks','Fishing':'End of Dragons mastery tracks'}
+    mapped=next((page for name,page in regional.items() if name.casefold()==subject.casefold()),None)
+    if game=='Guild Wars 2' and mapped:
+        topic=mapped
+    if topic:
+        result={'query':{'pages':[{'title':topic}]}}
+    elif game=='Guild Wars 2':
+        exact=wiki_json(host,api,{'action':'query','format':'json','formatversion':2,'titles':subject,'redirects':1})
+        pages=[p for p in exact.get('query',{}).get('pages',[]) if isinstance(p,dict) and 'missing' not in p and 'invalid' not in p and isinstance(p.get('pageid'),int)]
+        if pages: result={'query':{'pages':pages[:1]}}
+        else:
+            result=wiki_json(host,api,params)
+            terms=set(re.findall(r'\w{3,}',subject.casefold()))-{'guild','wars','research','mastery','achievement','requirements','track','completion','objectives'}
+            result={'query':{'pages':[p for p in result.get('query',{}).get('pages',[]) if terms & set(re.findall(r'\w{3,}',p.get('title','').casefold()))]}}
+    else: result=wiki_json(host,api,params)
     articles=[]
     for page in sorted(result.get('query',{}).get('pages',[]),key=lambda p:p.get('index',0))[:2]:
         title=page.get('title')
@@ -158,8 +211,15 @@ def lookup(game,query):
             if not body: continue
             # Index table headings first so long categories retain their item names.
             extract=('Table column headings (not a list of mastery levels) / achievement names:\n'+headings[:4000]+'\nArticle details:\n'+body[:6000]) if headings else body[:10000]
+            selected_rows=[row for row in parser.rows if row['section'].casefold()==subject.casefold() or any(cell.casefold()==subject.casefold() for cell in row['cells'])]
+            focus='\n'.join('Section: '+row['section']+' | '+' | '.join(label+': '+value for label,value in zip(row['columns'],row['cells'])) for row in selected_rows)
+            if not focus and title.casefold()==subject.casefold() and parser.fields:
+                focus='Subject: '+title+' | '+' | '.join(parser.fields)
+            if focus:
+                extract='Requested table evidence (keep row labels and units together):\n'+focus+'\nOther partial article context:\n'+extract[:4000]
             article={'title':title[:200],'text':extract,'details_truncated':section_partial or len(body)> (6000 if headings else 10000) or len(headings)>4000,
                      'url':'https://'+host+page_path+quote(title.replace(' ','_'),safe='')}
+            if focus: article['focus_text']=focus[:3500]
             if game=='Guild Wars 2' and parser.item_names:
                 article['item_names']=parser.item_names[:200]
                 article['item_names_truncated']=len(parser.item_names)>200

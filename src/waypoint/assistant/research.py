@@ -1,7 +1,7 @@
 """Local model plans a bounded game lookup; only validated search terms leave the PC."""
 import json,re
 from .routing import is_greeting,is_research_request
-from .web_lookup import SOURCES,lookup,gw2_topic
+from .web_lookup import SOURCES,lookup,gw2_topic,named_subject
 
 PLAN_SCHEMA={'type':'object','properties':{
     'game':{'type':'string','enum':['none',*SOURCES]},
@@ -42,6 +42,9 @@ def research(client,question,history,observation=None,window_title='',progress=N
               {'game':'Blish HUD','query':'API integration'} if 'Blish HUD' in sources and re.search(r'(?i)\b(blish\s*hud|bishhud)\b',question)
               else json.loads(client.complete(prompt,schema=schema,max_tokens=128)))
         game=plan.get('game'); query=plan.get('query')
+        supplied=named_subject(question)
+        if supplied and 'Guild Wars 2' in sources and (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(?:guild wars 2|gw2)\b',question)):
+            game,query='Guild Wars 2',supplied
         # Standalone requests for steps/requirements must keep their established subject.
         if previous_topic and re.fullmatch(r'(?is)\s*(?:what (?:are |is )?(?:the )?(?:specific )?(?:requirements|next step|first step|starting point)|can you give me (?:one |a )?(?:concrete )?next step|is there a specific sequence).*',question) and not re.search(r'(?i)\b(?:for|about|called|named)\s+\w+',question):
             game,query=previous_topic['game'],previous_topic['query']
@@ -49,7 +52,7 @@ def research(client,question,history,observation=None,window_title='',progress=N
         # drifts to a related article. Explicit new names still take precedence.
         unnamed=re.search(r'(?i)\b(?:this|that|the) (?:achievement|event|mastery|track|plan|time constraint)\b|\b(?:it|its)\b',question)
         explicit=re.search(r'(?i)\b(?:for|about|called|named)\s+(?!this\b|that\b|the\b|it\b)\w+',question)
-        if previous_topic and unnamed and not explicit and not gw2_topic(question) and not question.startswith('My original request is:'):
+        if previous_topic and unnamed and not supplied and not explicit and not gw2_topic(question) and not question.startswith('My original request is:'):
             game,query=previous_topic['game'],previous_topic['query']
         # The current question takes precedence; only use the latest established
         # user topic when the follow-up has no known named topic of its own.

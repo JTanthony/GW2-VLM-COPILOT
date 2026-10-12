@@ -30,7 +30,7 @@ class WebTests(unittest.TestCase):
         self.assertIn('Hidden task',articles[0]['text']); self.assertIn('Find the chest',articles[0]['text'])
     def test_declared_count_mismatch_does_not_claim_complete_list(self):
         html='<p>Total achievements: 2</p><tr data-id="achievement123"><th>One verified name</th></tr>'
-        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'Category'}]}},{'parse':{'text':html}}]):
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'category','missing':True}]}},{'query':{'pages':[{'title':'Category'}]}},{'parse':{'text':html}}]):
             article=lookup('Guild Wars 2','category')[0]
         self.assertEqual(article['declared_item_count'],2); self.assertFalse(article['item_count_matches'])
     def test_unapproved_source_rejected(self):
@@ -82,3 +82,32 @@ class WebTests(unittest.TestCase):
         with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=ValueError('Wiki did not return JSON text.')) as fetch:
             with self.assertRaises(ValueError): article_html('wiki.guildwars2.com','/api.php','Page','Query')
         self.assertEqual(fetch.call_count,1)
+
+    def test_exact_gw2_redirect_precedes_keyword_search(self):
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'The spirits mostly come out at night. Mostly...', 'pageid':1}]}},{'parse':{'text':'<p>Lost Souls: defeat four Bloodstone Fen champions.</p>'}}]) as fetch:
+            result=lookup('Guild Wars 2','Lost Souls achievement')
+        self.assertEqual(fetch.call_args_list[0].args[2]['titles'],'Lost Souls')
+        self.assertEqual(fetch.call_count,2); self.assertIn('Bloodstone Fen',result[0]['text'])
+
+    def test_unrelated_search_hits_are_not_evidence(self):
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'missing':True}]}},{'query':{'pages':[{'title':'Griffon'},{'title':'Roller Beetle'}]}}]) as fetch:
+            self.assertEqual(lookup('Guild Wars 2','Raven Attunement mastery requirements'),[])
+        self.assertEqual(fetch.call_count,2)
+
+    def test_turtle_table_row_preserves_region_and_columns(self):
+        html='<h3>Turtle Mount</h3><table><tr><th>Mastery</th><th>XP required</th><th>Points</th><th>Description</th></tr><tr><td>Slam Mastery</td><td>635,000</td><td>3</td><td>Generate ammo</td></tr></table><h3>Fishing</h3>'
+        with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':html}}) as fetch:
+            article=lookup('Guild Wars 2','Turtle Mount mastery track')[0]
+        self.assertEqual(fetch.call_args.args[2]['page'],'End of Dragons mastery tracks')
+        self.assertIn('XP required: 635,000',article['focus_text']); self.assertIn('Points: 3',article['focus_text'])
+
+    def test_coin_image_units_retained_as_inert_text(self):
+        from waypoint.assistant.web_lookup import WikiText
+        parser=WikiText(); parser.feed('<p>Rent for 10 <img alt="Silver coin" src="bad"></p>')
+        self.assertIn('[silver coin]',''.join(parser.parts))
+
+    def test_individual_mastery_fields_receive_compaction_priority(self):
+        html='<table><tr><th>Region</th><td>End of Dragons</td></tr><tr><th>Track</th><td>Fishing</td></tr><tr><th>Experience</th><td>1,016,000</td></tr></table>'
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'Fishing on a Full Tank','pageid':1}]}},{'parse':{'text':html}}]):
+            article=lookup('Guild Wars 2','Fishing on a Full Tank mastery')[0]
+        self.assertIn('Region: End of Dragons',article['focus_text']); self.assertIn('Experience: 1,016,000',article['focus_text'])

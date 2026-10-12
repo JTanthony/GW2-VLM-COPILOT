@@ -50,6 +50,13 @@ class InferenceTests(unittest.TestCase):
         self.assertIn('Wyvern Matriarch spawns at the platform.',trimmed)
         self.assertNotIn('oldold',trimmed)
         self.assertLess(len(trimmed),len(p))
+    def test_compaction_keeps_whole_requested_table_row(self):
+        from waypoint.inference.budget import compact
+        row='Section: Fishing | Mastery: Fishing on a Full Tank | XP required: 1,016,000 | Points: 4 | Description: +100 while Nourished'
+        article={'title':'End of Dragons mastery tracks','focus_text':row,'text':'Other unrelated tracks. '*1000}
+        prompt='Player question: What are the requirements?\nDistinguish article facts from current screen evidence.\n'+json.dumps([article])
+        result=compact(prompt,3)
+        self.assertIn(row,result); self.assertNotIn('focus_text',result)
     def test_bad_observation_rejected(self):
         with self.assertRaises(ValueError): validate_observation('{"summary":"incomplete"}')
     def test_stop_only_owned_process(self):

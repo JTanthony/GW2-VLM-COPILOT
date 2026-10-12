@@ -26,6 +26,7 @@ QUESTION_SCHEMA={'type':'object','properties':{'question':{'type':'string'}},'re
 def validate_question(question):
     if not isinstance(question,str) or not 1<=len(question.strip())<=500 or sensitive(question):
         raise ValueError('Generated question failed privacy or length checks.')
+    if re.search(r'[{}]|\ufffd',question): raise ValueError('Generated question was malformed.')
     if re.search(r'(?i)\b(?:what|which).{0,90}\b(?:you (?:want|hope|plan)|do you (?:enjoy|prefer|like)|are you (?:hoping|looking|currently|struggling|focusing|primarily))\b|\b(?:could|can) you tell me the name.{0,70}you(?:\x27|’)?re looking|\bwhere are you\b|\bI need.{0,60}\bto (?:guide|help) you\b',question):
         raise ValueError('Generated question used the helper role instead of the player role.')
     return question.strip()
@@ -58,6 +59,8 @@ def next_question(player,prompt,dialogue,turn):
     except ValueError as exc:
         if str(exc)=='Incomplete model response: length':
             note='Player model response was truncated; used a controlled follow-up'
+        elif str(exc)=='Generated question was malformed.':
+            note='Player model question was malformed; used a controlled follow-up'
         elif str(exc)=='Generated question used the helper role instead of the player role.':
             note='Player model used the helper role; used a controlled follow-up'
         else: raise

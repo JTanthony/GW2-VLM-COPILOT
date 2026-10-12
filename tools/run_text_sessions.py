@@ -63,7 +63,11 @@ def main():
     accounts=test_accounts(args.account_mode,args.game,out)
     player_config=json.loads((ROOT/'config/player.local.json').read_text('utf-8'))
     copilot_config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8')); copilot_config.pop('projector_path',None)
-    (out/'run-info.json').write_text(json.dumps({'account_mode':args.account_mode,'game':accounts.selected_game,'snapshot_time':accounts.snapshot.get('fetched_at') if accounts.snapshot else None,'player_model':'Gemma 3 1B IT Q4_K_M','capture':False,'sessions_limit':args.sessions,'hours_limit':args.hours},indent=2),encoding='utf-8')
+    from waypoint.version import VERSION
+    import hashlib
+    review_files=('assistant/research.py','assistant/web_lookup.py','assistant/local.py','inference/budget.py','testing/text_sessions.py')
+    source_digest=hashlib.sha256(b''.join((ROOT/'src/waypoint'/name).read_bytes() for name in review_files)).hexdigest()
+    (out/'run-info.json').write_text(json.dumps({'app_version':VERSION,'review_code_sha256':source_digest,'account_mode':args.account_mode,'game':accounts.selected_game,'snapshot_time':accounts.snapshot.get('fetched_at') if accounts.snapshot else None,'player_model':'Gemma 3 1B IT Q4_K_M','capture':False,'sessions_limit':args.sessions,'hours_limit':args.hours},indent=2),encoding='utf-8')
     titles=json.loads((ROOT/'src/waypoint/testing/test_titles.json').read_text('utf-8'))
     titles=[title for title in titles if title['game']=='Guild Wars 2']
     plans=title_scenarios(accounts,titles)

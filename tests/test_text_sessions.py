@@ -103,3 +103,8 @@ class UnquotedTopicTests(unittest.TestCase):
         question,note=next_question(player,prompt,[],2)
         self.assertIn('unsupported named topic',note)
         self.assertIn('Verdant Brink',question); self.assertNotIn('Silverwood Forest',question)
+
+    def test_malformed_generated_question_falls_back_without_runner_error(self):
+        player=MagicMock(); player.complete.return_value=json.dumps({'question':'What event?} trailing junk'})
+        question,note=next_question(player,json.dumps({'original_player_question':'Help with Lost Souls.'}),[],2)
+        self.assertIn('malformed',note); self.assertNotIn('}',question)
