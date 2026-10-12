@@ -93,3 +93,13 @@ class TextSessionTests(unittest.TestCase):
             helper=MagicMock(); helper.chat.return_value='A normal answer.'
             summary=run_sessions(player,lambda session:helper,Accounts(),directory,sessions=100,turns=6,delay=0)
         self.assertEqual(summary['errors'],3); self.assertEqual(summary['stop_reason'],'repeated errors')
+
+class UnquotedTopicTests(unittest.TestCase):
+    def test_unquoted_invented_zone_uses_controlled_followup(self):
+        from unittest.mock import MagicMock
+        from waypoint.testing.text_sessions import next_question
+        player=MagicMock(); player.complete.return_value=json.dumps({'question':'How do I explore Silverwood Forest?'})
+        prompt=json.dumps({'original_player_question':'Help me explore Verdant Brink.'})
+        question,note=next_question(player,prompt,[],2)
+        self.assertIn('unsupported named topic',note)
+        self.assertIn('Verdant Brink',question); self.assertNotIn('Silverwood Forest',question)

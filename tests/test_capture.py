@@ -20,7 +20,7 @@ class CaptureTests(unittest.TestCase):
         a.chat('I play Example Game',articles=[]); a.chat('Can you help with that game?',articles=[])
         self.assertIn('I play Example Game',client.complete.call_args.args[0])
         for i in range(8): a.chat(str(i),articles=[])
-        self.assertEqual(len(a.history),6)
+        self.assertEqual(len(a.history),12)
     def test_approved_capture_state_supplied_to_text_chat(self):
         client=MagicMock(); client.complete.return_value='Still analyzing.'
         Assistant(client).chat('Help me learn the game flow',articles=[],vision_state={'approved':True,'frames_captured':40,'analyzing':True})

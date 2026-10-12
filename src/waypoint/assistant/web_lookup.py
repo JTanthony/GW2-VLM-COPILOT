@@ -64,10 +64,17 @@ class WikiText(HTMLParser):
     """Convert API article fragments, including tables, into inert text."""
     def __init__(self):
         super().__init__(); self.blocked=0; self.parts=[]; self.headers=[]; self.heading=None
-        self.achievement_row=False; self.item_names=[]; self.first_heading=False
+        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None
     def handle_starttag(self,tag,attrs):
+        classes=dict(attrs).get('class','').split()
+        if self.skipped_divs:
+            if tag==self.skipped_tag: self.skipped_divs+=1
+            return
+        if tag in ('div','table') and any(c in ('navbox','vertical-navbox','toc','mw-navigation') for c in classes):
+            self.skipped_tag=tag; self.skipped_divs=1
+            return
         if tag in ('script','style','nav'): self.blocked+=1
-        if self.blocked: return
+        if self.blocked or self.skipped_divs: return
         if tag=='tr':
             self.achievement_row=bool(re.fullmatch(r'achievement\d+',dict(attrs).get('data-id','')))
             self.first_heading=True
@@ -76,6 +83,9 @@ class WikiText(HTMLParser):
         if tag=='th': self.heading=[]
     def handle_endtag(self,tag):
         if tag in ('script','style','nav'): self.blocked=max(0,self.blocked-1); return
+        if self.skipped_divs:
+            if tag==self.skipped_tag: self.skipped_divs-=1
+            return
         if self.blocked: return
         if tag=='th' and self.heading is not None:
             value=' '.join(self.heading).strip()
@@ -87,7 +97,7 @@ class WikiText(HTMLParser):
         if tag=='tr': self.achievement_row=False
         if tag in ('p','tr','li','h2','h3'): self.parts.append('\n')
     def handle_data(self,data):
-        if not self.blocked and data.strip():
+        if not self.blocked and not self.skipped_divs and data.strip():
             value=' '.join(data.split()); self.parts.append(value+' ')
             if self.heading is not None: self.heading.append(value)
 
@@ -105,6 +115,28 @@ def wiki_json(host,api,params):
         return result
     finally: connection.close()
 
+def article_html(host,api,title,query):
+    params={'action':'parse','page':title,'prop':'text','format':'json','formatversion':2,'disableeditsection':1}
+    try:
+        return wiki_json(host,api,params).get('parse',{}).get('text',''),False
+    except ValueError as exc:
+        if str(exc)!='Wiki response exceeded the size limit.': raise
+    # Keep the same byte limit. A large page gets one bounded section fallback,
+    # rather than raising the cap or downloading an unrestricted article.
+    sections=wiki_json(host,api,{**params,'prop':'sections'}).get('parse',{}).get('sections',[])
+    terms=set(re.findall(r'\w{3,}',query.casefold()))
+    ranked=sorted(sections,key=lambda item:len(terms & set(re.findall(r'\w{3,}',item.get('line','').casefold()))),reverse=True)
+    chosen=['0']
+    if ranked and terms & set(re.findall(r'\w{3,}',ranked[0].get('line','').casefold())):
+        index=str(ranked[0].get('index',''))
+        if index.isdigit() and index!='0': chosen.append(index)
+    fragments=[]
+    for section in chosen:
+        html=wiki_json(host,api,{**params,'section':section}).get('parse',{}).get('text','')
+        if not isinstance(html,str): raise ValueError('Wiki article text missing.')
+        fragments.append(html)
+    return '\n'.join(fragments),True
+
 def lookup(game,query):
     if game not in SOURCES: raise ValueError('Choose an approved game source.')
     query=query.strip()
@@ -119,15 +151,14 @@ def lookup(game,query):
     for page in sorted(result.get('query',{}).get('pages',[]),key=lambda p:p.get('index',0))[:2]:
         title=page.get('title')
         if isinstance(title,str):
-            parsed=wiki_json(host,api,{'action':'parse','page':title,'prop':'text','format':'json','formatversion':2,'disableeditsection':1})
-            html=parsed.get('parse',{}).get('text','')
+            html,section_partial=article_html(host,api,title,query)
             if not isinstance(html,str): raise ValueError('Wiki article text missing.')
             parser=WikiText(); parser.feed(html)
             body=''.join(parser.parts).strip(); headings='\n'.join(parser.headers)
             if not body: continue
             # Index table headings first so long categories retain their item names.
-            extract=('Table headings / item names:\n'+headings[:4000]+'\nArticle details:\n'+body[:6000]) if headings else body[:10000]
-            article={'title':title[:200],'text':extract,'details_truncated':len(body)> (6000 if headings else 10000) or len(headings)>4000,
+            extract=('Table column headings (not a list of mastery levels) / achievement names:\n'+headings[:4000]+'\nArticle details:\n'+body[:6000]) if headings else body[:10000]
+            article={'title':title[:200],'text':extract,'details_truncated':section_partial or len(body)> (6000 if headings else 10000) or len(headings)>4000,
                      'url':'https://'+host+page_path+quote(title.replace(' ','_'),safe='')}
             if game=='Guild Wars 2' and parser.item_names:
                 article['item_names']=parser.item_names[:200]

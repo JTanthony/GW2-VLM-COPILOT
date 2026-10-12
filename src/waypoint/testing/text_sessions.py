@@ -47,6 +47,11 @@ def next_question(player,prompt,dialogue,turn):
         names=re.findall(r'[\"\u201c\u2018\x27]([^\"\u201d\u2019\x27]{3,80})[\"\u201d\u2019\x27]',question)
         if any(name.casefold() not in prompt.casefold() for name in names):
             note='Player model introduced an unsupported named topic; used a controlled follow-up'
+        # Catch unquoted multiword proper names too (e.g. invented zones),
+        # without restricting ordinary follow-up vocabulary.
+        proper_names=re.findall(r'\b[A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)+\b',question)
+        if any(name.casefold() not in prompt.casefold() for name in proper_names):
+            note='Player model introduced an unsupported named topic; used a controlled follow-up'
         normalize=lambda value: re.sub(r'[^a-z0-9]','',value.casefold())
         if any(normalize(question)==normalize(item['question']) for item in dialogue):
             note='Player model repeated a question; used a controlled follow-up'

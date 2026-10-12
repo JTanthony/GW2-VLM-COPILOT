@@ -154,3 +154,26 @@ class ResearchTests(unittest.TestCase):
         answer=Assistant(client).chat('Show me the sources',articles=articles)
         self.assertIn('Sources:',answer)
         self.assertIn(articles[0]['url'],answer)
+
+    def test_unnamed_achievement_followup_keeps_topic_but_new_name_wins(self):
+        from types import SimpleNamespace
+        resources=SimpleNamespace(_research_topic={'game':'Guild Wars 2','query':'Respectable Researcher'},cached_lookup=MagicMock(return_value=[{'text':'Evidence'}]))
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Hazardous Research'})
+        research(client,'Is this achievement still available?',[],resources=resources)
+        self.assertEqual(resources.cached_lookup.call_args.args[1],'Respectable Researcher')
+        client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Gliding'})
+        research(client,'Is this mastery available for Gliding?',[],resources=resources)
+        self.assertEqual(resources.cached_lookup.call_args.args[1],'Gliding')
+
+    def test_vague_exploration_asks_for_detail_without_planner(self):
+        client=MagicMock()
+        self.assertEqual(research(client,'Help me choose nearby goals and an efficient order, asking for my location if you need it.',[]),([],''))
+        client.complete.assert_not_called()
+
+    def test_player_constraints_survive_more_than_three_turns(self):
+        client=MagicMock(); client.complete.return_value='Answer'
+        assistant=Assistant(client)
+        assistant.chat('I have 20 minutes and prefer solo exploration.',articles=[])
+        for question in ('What can I do?', 'What comes next?', 'What is required?'):
+            assistant.chat(question,articles=[])
+        self.assertIn('I have 20 minutes',client.complete.call_args.args[0])

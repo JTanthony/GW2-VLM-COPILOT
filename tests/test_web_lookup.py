@@ -57,3 +57,28 @@ class WebTests(unittest.TestCase):
         from waypoint.assistant.routing import is_research_request
         self.assertTrue(is_research_request('Research Bishhud and its API'))
         self.assertFalse(is_research_request('How much gold is on my screen?'))
+
+    def test_navigation_boxes_do_not_become_mastery_levels(self):
+        from waypoint.assistant.web_lookup import WikiText
+        parser=WikiText()
+        parser.feed('<p>Pact Mentor</p><table class="navbox"><tr><td><div>Central Tyria</div>Heart of Thorns</td></tr></table><p>Actual requirements</p>')
+        body=''.join(parser.parts)
+        self.assertIn('Pact Mentor',body); self.assertIn('Actual requirements',body)
+        self.assertNotIn('Heart of Thorns',body); self.assertNotIn('Central Tyria',body)
+
+    def test_large_article_uses_bounded_section_fallback(self):
+        from waypoint.assistant.web_lookup import article_html
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[
+            ValueError('Wiki response exceeded the size limit.'),
+            {'parse':{'sections':[{'index':'2','line':'Tank Escort'}]}},
+            {'parse':{'text':'<p>Intro</p>'}}, {'parse':{'text':'<p>Tank requirements</p>'}}
+        ]) as fetch:
+            html,partial=article_html('wiki.guildwars2.com','/api.php','Forging Steel','Tank Escort')
+        self.assertTrue(partial); self.assertIn('Tank requirements',html)
+        self.assertEqual([call.args[2].get('section') for call in fetch.call_args_list[-2:]],['0','2'])
+
+    def test_section_fallback_does_not_swallow_other_failures(self):
+        from waypoint.assistant.web_lookup import article_html
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=ValueError('Wiki did not return JSON text.')) as fetch:
+            with self.assertRaises(ValueError): article_html('wiki.guildwars2.com','/api.php','Page','Query')
+        self.assertEqual(fetch.call_count,1)
