@@ -23,3 +23,7 @@ Use a new Windows account or VM with no Python, models or prior app data:
 --check-package checks bundled imports, UI assets and a synthetic Windows-protection round trip, writing package-check.json to per-user app data. --smoke opens/closes the UI without loading a model or capturing. These checks are not substitutes for clean-Windows and real GPU/game acceptance.
 
 Build contributors: install requirements.txt and PyInstaller 6.22.3 in a dedicated build environment, then run python packaging/build_windows.py. Output goes to ignored local-data/releases. Do not copy development .local.json files, model weights or account stores into the package.
+
+## Update notifications
+
+The app checks for newer Windows releases, including alpha prereleases, in the background on launch. Use **Download update** to open the GitHub release page, close the app, and follow the README to replace the program files. Models and saved AppData are separate; do not run the uninstaller or delete your saved data when updating. The checker never installs updates automatically. **Check updates on launch** can be turned off, and **Check updates** runs a manual check. Older versions without this checker still require a manual download.

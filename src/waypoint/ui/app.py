@@ -1,5 +1,5 @@
 """Canonical Waypoint GUI. User-approved continuous capture; no Codex relay or microphone."""
-import argparse,json,queue,threading,time,traceback,base64,re,sys
+import argparse,json,queue,threading,time,traceback,base64,re,sys,webbrowser
 from pathlib import Path
 import tkinter as tk
 from tkinter import font as tkfont,messagebox
@@ -7,6 +7,8 @@ from .theme import BG,PANEL,TEXT,MUTED,ACCENT
 from .widgets import DarkScrollbar,OvalSlider
 from .onboarding import WELCOME
 from waypoint.branding import APP_NAME
+from waypoint.version import VERSION
+from waypoint.updates import check_for_update
 from waypoint.paths import app_root,data_root
 from waypoint.storage import preferences
 from waypoint.capture.windows import list_windows
@@ -77,6 +79,14 @@ class App:
         self.button(row,'Accounts',self.account_window).pack(side='left',padx=(4,0))
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
+        self.update_available=None; self.update_checking=False
+        update_row=tk.Frame(self.body,bg=BG); update_row.grid(row=5,column=0,sticky='ew',padx=8,pady=(0,3))
+        self.auto_updates=tk.BooleanVar(value=self.settings.get('check_updates_on_launch',True))
+        tk.Checkbutton(update_row,text='Check updates on launch',variable=self.auto_updates,bg=BG,fg=MUTED,
+                       selectcolor=PANEL,activebackground=BG,font=('Segoe UI',9)).pack(side='left')
+        self.update_button=self.button(update_row,'Check updates',self.update_action); self.update_button.pack(side='right')
+        self.update_status=tk.Label(self.body,text='',bg=BG,fg=ACCENT,font=('Segoe UI',9),anchor='w',justify='left',wraplength=320)
+        self.update_status.grid(row=6,column=0,sticky='ew',padx=10); self.update_status.grid_remove()
         grip=tk.Label(self.shell,text='\u25e2',bg=BG,fg=MUTED,cursor='size_nw_se'); grip.place(relx=1,rely=1,anchor='se')
         grip.bind('<ButtonPress-1>',self.resize_start); grip.bind('<B1-Motion>',self.resize)
         self.body.bind('<Configure>',self.fit_body)
@@ -86,8 +96,35 @@ class App:
             self.append('Waypoint','Development vision recording enabled: '+str(self.review.directory)+'. Frames and visible text are saved locally, up to one hour or 5 GB.')
         self.chat.yview_moveto(0)
         self.root.after(100,self.poll)
+        if not smoke and self.auto_updates.get(): self.root.after(1200,lambda:self.check_updates(False))
         if smoke:
             self.root.after(100,lambda:self.resize_text(1)); self.root.after(200,self.fold); self.root.after(300,self.fold); self.root.after(450,self.close)
+    def update_action(self):
+        if self.update_available:
+            webbrowser.open(self.update_available['url'])
+        else: self.check_updates(True)
+    def check_updates(self,manual=True):
+        if self.update_checking or self.closing: return
+        self.update_checking=True; self.update_button.configure(state='disabled')
+        if manual:
+            self.update_status.configure(text='Checking for updates...'); self.update_status.grid()
+        def work():
+            try: result=check_for_update(); error=False
+            except Exception: result=None; error=True
+            self.events.put(('update_result',(result,error,manual)))
+        threading.Thread(target=work,daemon=True).start()
+    def finish_update_check(self,value):
+        result,error,manual=value
+        self.update_checking=False; self.update_button.configure(state='normal')
+        if self.closing: return
+        if result:
+            self.update_available=result
+            self.update_button.configure(text='Download update',fg=ACCENT)
+            self.update_status.configure(text='Update available: v'+result['version']+' (installed: v'+VERSION+')')
+            self.update_status.grid()
+        elif manual:
+            self.update_status.configure(text='Could not check updates. Try again later.' if error else 'No newer Windows release available (v'+VERSION+').')
+            self.update_status.grid()
     def account_window(self):
         dialog=tk.Toplevel(self.root); dialog.title('Connect your Guild Wars 2 Account'); dialog.geometry('500x390'); dialog.minsize(500,390); dialog.transient(self.root)
         dialog.iconphoto(False,self.brand_icon)
@@ -325,6 +362,7 @@ class App:
         try:
             while True:
                 kind,value=self.events.get_nowait()
+                if kind=='update_result': self.finish_update_check(value); continue
                 if kind=='review_error':
                     if hasattr(self,'recording'): self.recording.set(False)
                     self.append('Waypoint',value); continue
@@ -354,7 +392,7 @@ class App:
     def close(self):
         if self.closing: return
         self.closing=True; self.cancelled.set(); self.stop_feed()
-        if not self.smoke: preferences.save(ROOT,{'font_size':self.size,'opacity':self.opacity.value})
+        if not self.smoke: preferences.save(ROOT,{'font_size':self.size,'opacity':self.opacity.value,'check_updates_on_launch':self.auto_updates.get()})
         self.status.configure(text='Closing after local work and engine shutdown\u2026')
     def run(self): self.root.mainloop()
 def main():

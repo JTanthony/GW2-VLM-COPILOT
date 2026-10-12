@@ -5,3 +5,7 @@ Model inference uses a loopback server. Approved frames stay in memory; game inp
 Credentials are saved using Windows user protection. Private account snapshots, conversations, resources and logs can exist under local-data. Model outputs and wiki text are untrusted data, not commands.
 
 Never upload local-data, runtime, .venv, *.local.json, .env, keys, snapshots, logs, screenshots with account information, or model weights. .gitignore does not protect previously tracked files or manually assembled ZIPs. Inspect the actual upload manifest. Report only sanitized failures using synthetic fixtures; never post an API key in an issue.
+
+## Update notifications
+
+On launch, the app checks the public GitHub release list for newer Windows ZIPs, including prereleases. Uncheck **Check updates on launch** to disable this; **Check updates** remains available manually. GitHub receives your network address and the installed version in the request header. No chat, screenshots, account data or tokens are sent. Checks do not download or install anything. **Download update** opens the project release page in your browser. Offline or failed automatic checks stay quiet.

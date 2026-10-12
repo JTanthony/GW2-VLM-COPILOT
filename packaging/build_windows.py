@@ -2,6 +2,8 @@
 import subprocess,sys,shutil,json,hashlib,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'src'))
+from waypoint.version import VERSION
 DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup')
 DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog'}
 DEV_FILES={'AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
@@ -41,7 +43,7 @@ def assemble(folder):
         manifest.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
     (folder/'PACKAGE-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     output=ROOT/'local-data/releases';output.mkdir(parents=True,exist_ok=True)
-    archive=output/'GW2-VLM-COPILOT-v0.1.9-alpha-windows-x64.zip'
+    archive=output/f'GW2-VLM-COPILOT-v{VERSION}-windows-x64.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as zipped:
         zipped.writestr(folder.name+'/Models/',b'')
         for path in folder.rglob('*'):
