@@ -85,7 +85,7 @@ class App:
         self.account_button.bind('<Leave>',self.hide_account_status)
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
-        self.update_available=None; self.update_checking=False
+        self.update_available=None; self.update_checking=False; self.update_status_timer=None
         update_row=tk.Frame(self.body,bg=BG); update_row.grid(row=5,column=0,sticky='ew',padx=8,pady=(0,3))
         self.auto_updates=tk.BooleanVar(value=self.settings.get('check_updates_on_launch',True))
         tk.Checkbutton(update_row,text='Check updates on launch',variable=self.auto_updates,bg=BG,fg=MUTED,
@@ -111,6 +111,8 @@ class App:
         else: self.check_updates(True)
     def check_updates(self,manual=True):
         if self.update_checking or self.closing: return
+        if self.update_status_timer is not None:
+            self.root.after_cancel(self.update_status_timer); self.update_status_timer=None
         self.update_checking=True; self.update_button.configure(state='disabled')
         if manual:
             self.update_status.configure(text='Checking for updates...'); self.update_status.grid()
@@ -131,6 +133,12 @@ class App:
         elif manual:
             self.update_status.configure(text='Could not check updates. Try again later.' if error else 'No newer Windows release available (v'+VERSION+').')
             self.update_status.grid()
+        if result or manual:
+            if self.update_status_timer is not None: self.root.after_cancel(self.update_status_timer)
+            self.update_status_timer=self.root.after(6000,self.hide_update_status)
+    def hide_update_status(self):
+        self.update_status_timer=None
+        self.update_status.grid_remove()
     def update_account_indicator(self):
         state=self.accounts.connection_state()
         self.account_button.configure(image=self.account_dot_images[state['connected']])
