@@ -3,11 +3,11 @@ from pathlib import Path
 from waypoint.paths import app_root
 from .theme import BG,PANEL,TEXT,MUTED,ACCENT
 
-def status_circle(color, diameter=8):
+def status_circle(color, diameter=8, background_color=BG):
     """Small native-resolution circle with lightly antialiased edges."""
     image=tk.PhotoImage(width=diameter,height=diameter)
     foreground=tuple(int(color[i:i+2],16) for i in (1,3,5))
-    background=tuple(int(BG[i:i+2],16) for i in (1,3,5))
+    background=tuple(int(background_color[i:i+2],16) for i in (1,3,5))
     radius=diameter/2
     for y in range(diameter):
         for x in range(diameter):

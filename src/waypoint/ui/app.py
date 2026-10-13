@@ -76,15 +76,13 @@ class App:
         self.entry.bind('<Return>',self.enter)
         row=tk.Frame(self.body,bg=BG); row.grid(row=4,column=0,sticky='ew',padx=8,pady=4)
         self.connect=self.button(row,'Start engine',self.toggle); self.connect.pack(side='left')
-        self.button(row,'Accounts',self.account_window).pack(side='left',padx=(4,0))
-        self.account_dot=tk.Canvas(row,width=12,height=20,bg=BG,bd=0,highlightthickness=0)
-        self.account_dot.pack(side='left',padx=(3,3))
-        self.account_dot_images={False:status_circle('#ff7272'),True:status_circle('#58d68d')}
-        self.account_dot_shape=self.account_dot.create_image(6,10,image=self.account_dot_images[False])
-        self.account_dot.bind('<Button-1>',lambda event:self.account_window())
+        self.account_button=self.button(row,'Accounts',self.account_window)
+        self.account_button.pack(side='left',padx=(4,0))
+        self.account_dot_images={False:status_circle('#ff7272',background_color=PANEL),True:status_circle('#58d68d',background_color=PANEL)}
+        self.account_button.configure(image=self.account_dot_images[False],compound='right')
         self.account_tooltip=None
-        self.account_dot.bind('<Enter>',self.show_account_status)
-        self.account_dot.bind('<Leave>',self.hide_account_status)
+        self.account_button.bind('<Enter>',self.show_account_status)
+        self.account_button.bind('<Leave>',self.hide_account_status)
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
         self.update_available=None; self.update_checking=False
@@ -135,7 +133,7 @@ class App:
             self.update_status.grid()
     def update_account_indicator(self):
         state=self.accounts.connection_state()
-        self.account_dot.itemconfigure(self.account_dot_shape,image=self.account_dot_images[state['connected']])
+        self.account_button.configure(image=self.account_dot_images[state['connected']])
     def show_account_status(self,event):
         self.hide_account_status()
         state=self.accounts.connection_state()
