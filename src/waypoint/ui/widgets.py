@@ -3,6 +3,20 @@ from pathlib import Path
 from waypoint.paths import app_root
 from .theme import BG,PANEL,TEXT,MUTED,ACCENT
 
+def status_circle(color, diameter=8):
+    """Small native-resolution circle with lightly antialiased edges."""
+    image=tk.PhotoImage(width=diameter,height=diameter)
+    foreground=tuple(int(color[i:i+2],16) for i in (1,3,5))
+    background=tuple(int(BG[i:i+2],16) for i in (1,3,5))
+    radius=diameter/2
+    for y in range(diameter):
+        for x in range(diameter):
+            coverage=sum((x+(sx+.5)/4-radius)**2+(y+(sy+.5)/4-radius)**2<=radius**2
+                         for sx in range(4) for sy in range(4))/16
+            pixel='#'+''.join(f'{round(b+(f-b)*coverage):02x}' for f,b in zip(foreground,background))
+            image.put(pixel,(x,y))
+    return image
+
 class DarkScrollbar(tk.Canvas):
     """Draw our own track because Windows ignores native scrollbar colors."""
     def __init__(self, parent, command):

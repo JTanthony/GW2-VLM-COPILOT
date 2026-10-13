@@ -4,7 +4,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import font as tkfont,messagebox
 from .theme import BG,PANEL,TEXT,MUTED,ACCENT
-from .widgets import DarkScrollbar,OvalSlider
+from .widgets import DarkScrollbar,OvalSlider,status_circle
 from .onboarding import WELCOME
 from waypoint.branding import APP_NAME
 from waypoint.version import VERSION
@@ -77,9 +77,10 @@ class App:
         row=tk.Frame(self.body,bg=BG); row.grid(row=4,column=0,sticky='ew',padx=8,pady=4)
         self.connect=self.button(row,'Start engine',self.toggle); self.connect.pack(side='left')
         self.button(row,'Accounts',self.account_window).pack(side='left',padx=(4,0))
-        self.account_dot=tk.Canvas(row,width=16,height=20,bg=BG,highlightthickness=0)
+        self.account_dot=tk.Canvas(row,width=12,height=20,bg=BG,bd=0,highlightthickness=0)
         self.account_dot.pack(side='left',padx=(3,3))
-        self.account_dot_shape=self.account_dot.create_oval(3,5,13,15,fill='#ff7272',outline='')
+        self.account_dot_images={False:status_circle('#ff7272'),True:status_circle('#58d68d')}
+        self.account_dot_shape=self.account_dot.create_image(6,10,image=self.account_dot_images[False])
         self.account_dot.bind('<Button-1>',lambda event:self.account_window())
         self.account_tooltip=None
         self.account_dot.bind('<Enter>',self.show_account_status)
@@ -134,7 +135,7 @@ class App:
             self.update_status.grid()
     def update_account_indicator(self):
         state=self.accounts.connection_state()
-        self.account_dot.itemconfigure(self.account_dot_shape,fill='#58d68d' if state['connected'] else '#ff7272')
+        self.account_dot.itemconfigure(self.account_dot_shape,image=self.account_dot_images[state['connected']])
     def show_account_status(self,event):
         self.hide_account_status()
         state=self.accounts.connection_state()
