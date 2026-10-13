@@ -46,4 +46,5 @@ class UpdateTests(unittest.TestCase):
         import queue
         app=App.__new__(App); app.events=queue.Queue(); app.events.put(('update_result',(None,False,False)))
         app.finish_update_check=MagicMock(); app.lock=MagicMock(); app.feed=None; app.last_vision_status=10**20; app.closing=False; app.root=MagicMock()
+        app.update_account_indicator=MagicMock()
         app.poll(); app.finish_update_check.assert_called_once(); app.lock.assert_not_called()

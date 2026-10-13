@@ -77,6 +77,13 @@ class App:
         row=tk.Frame(self.body,bg=BG); row.grid(row=4,column=0,sticky='ew',padx=8,pady=4)
         self.connect=self.button(row,'Start engine',self.toggle); self.connect.pack(side='left')
         self.button(row,'Accounts',self.account_window).pack(side='left',padx=(4,0))
+        self.account_dot=tk.Canvas(row,width=16,height=20,bg=BG,highlightthickness=0)
+        self.account_dot.pack(side='left',padx=(3,3))
+        self.account_dot_shape=self.account_dot.create_oval(3,5,13,15,fill='#ff7272',outline='')
+        self.account_dot.bind('<Button-1>',lambda event:self.account_window())
+        self.account_tooltip=None
+        self.account_dot.bind('<Enter>',self.show_account_status)
+        self.account_dot.bind('<Leave>',self.hide_account_status)
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
         self.update_available=None; self.update_checking=False
@@ -125,6 +132,22 @@ class App:
         elif manual:
             self.update_status.configure(text='Could not check updates. Try again later.' if error else 'No newer Windows release available (v'+VERSION+').')
             self.update_status.grid()
+    def update_account_indicator(self):
+        state=self.accounts.connection_state()
+        self.account_dot.itemconfigure(self.account_dot_shape,fill='#58d68d' if state['connected'] else '#ff7272')
+    def show_account_status(self,event):
+        self.hide_account_status()
+        state=self.accounts.connection_state()
+        text=('Account connected. Progress snapshot: '+str(state['fetched_at']) if state['connected'] else
+              'No account connected this session. Open Accounts to connect or use your saved token.')
+        self.account_tooltip=tk.Toplevel(self.root)
+        self.account_tooltip.overrideredirect(True)
+        self.account_tooltip.attributes('-topmost',True)
+        self.account_tooltip.geometry(f'+{event.x_root+8}+{event.y_root-55}')
+        tk.Label(self.account_tooltip,text=text,bg=PANEL,fg=TEXT,wraplength=300,font=('Segoe UI',9),padx=8,pady=5).pack()
+    def hide_account_status(self,event=None):
+        if self.account_tooltip:
+            self.account_tooltip.destroy(); self.account_tooltip=None
     def account_window(self):
         dialog=tk.Toplevel(self.root); dialog.title('Connect your Guild Wars 2 Account'); dialog.geometry('500x390'); dialog.minsize(500,390); dialog.transient(self.root)
         dialog.iconphoto(False,self.brand_icon)
@@ -359,6 +382,7 @@ class App:
         threading.Thread(target=work,daemon=True).start()
     def cancel(self): self.cancelled.set(); self.cancel_button.configure(state='disabled'); self.status.configure(text='Cancelling: current request finishes, then its result is discarded.')
     def poll(self):
+        self.update_account_indicator()
         try:
             while True:
                 kind,value=self.events.get_nowait()

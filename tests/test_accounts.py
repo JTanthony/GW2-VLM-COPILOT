@@ -5,6 +5,15 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.integrations.accounts import Accounts,get_gw2,connector_for,suggest_games,public_api_for
 
 class AccountTests(unittest.TestCase):
+    def test_indicator_requires_session_connection_and_snapshot(self):
+        account=Accounts()
+        self.assertFalse(account.connection_state()['connected'])
+        account.key='synthetic-test-only'
+        self.assertFalse(account.connection_state()['connected'])
+        account.snapshot={'fetched_at':'test date','records':[]}
+        self.assertEqual(account.connection_state(),{'connected':True,'fetched_at':'test date'})
+        account.disconnect()
+        self.assertFalse(account.connection_state()['connected'])
     def test_public_api_catalog_does_not_enable_unimplemented_connections(self):
         for game in ('World of Warcraft','World of Warcraft Classic','Old School RuneScape','Path of Exile','Path of Exile 2'):
             self.assertEqual(public_api_for(game),game)

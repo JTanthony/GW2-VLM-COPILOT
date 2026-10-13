@@ -80,6 +80,11 @@ class Accounts:
     def __init__(self,credential_store=None):
         self.credentials=credential_store if credential_store is not None else CredentialStore()
         self.lock=threading.Lock(); self.key=None; self.snapshot=None; self.names={}; self.generation=0; self.selected_game=''
+    def connection_state(self):
+        """Public UI state only: never expose the token."""
+        with self.lock:
+            return {'connected': bool(self.key and self.snapshot is not None),
+                    'fetched_at': self.snapshot.get('fetched_at') if self.snapshot else None}
     def saved_games(self): return [name for name in CONNECTORS if self.credentials.has(name)]
     def has_saved(self,game):
         provider=connector_for(game)
