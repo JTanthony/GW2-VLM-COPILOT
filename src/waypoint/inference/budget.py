@@ -9,6 +9,15 @@ def compact(prompt,level):
         except ValueError: continue
         keep=2 if level==1 else 0
         prompt=prompt[:start]+json.dumps(history[-keep:] if keep else [])+prompt[start+end:]
+    # Lookup planning stores dialogue inside its task JSON rather than the
+    # answer prompt's Previous conversation block.
+    for match in reversed(list(re.finditer(r'\n(?=\{)',prompt))):
+        start=match.end()
+        try: task,end=json.JSONDecoder().raw_decode(prompt[start:])
+        except ValueError: continue
+        if isinstance(task,dict) and isinstance(task.get('dialogue'),list):
+            task['dialogue']=task['dialogue'][-2:] if level==1 else []
+            prompt=prompt[:start]+json.dumps(task,ensure_ascii=False)+prompt[start+end:]
     marker='Distinguish article facts from current screen evidence.\n'
     start=prompt.find(marker)
     if start<0: return prompt

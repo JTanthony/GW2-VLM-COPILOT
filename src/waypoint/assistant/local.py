@@ -7,6 +7,11 @@ from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_obs
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
+    'A table Total row is an aggregate, never a mastery level. Mastery points are spent, not earned as a reward for training. Train one selected level at a time in the matching region. '
+    'Map Type and current topic must survive follow-ups; a group event or missing map-completion gift does not turn an open-world zone into an instance. '
+    'Base gliding unlocks, the Heart of Thorns gliding mastery track and WvW ability upgrades are separate paths. Do not merge their prerequisites. '
+    'Prerequisite and mutually-exclusive notes belong to a specific achievement row; do not assign neighboring achievement names to the current task. '
+
     'For screen-based suggestions, prioritize the current event or explicitly selected achievement. A watch-list entry or browsed map does not prove proximity. '
     'Separate checked objectives from remaining ones; recommend only supported next steps. Do not call nearly complete achievements easy or nearby without evidence. '
     'Do not volunteer combat coaching or reminders for events on other maps. '

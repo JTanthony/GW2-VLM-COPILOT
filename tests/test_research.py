@@ -188,3 +188,22 @@ class ResearchTests(unittest.TestCase):
         client=MagicMock(); client.complete.return_value='Night boss details.'
         result=Assistant(client).chat('Explain without a long sources footer.',articles=[{'title':'Night','text':'Details','url':'https://wiki.guildwars2.com/wiki/Night'}])
         self.assertNotIn('Sources:',result)
+
+    def test_track_name_bypasses_wrong_planner_topic(self):
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Other'})
+        with patch('waypoint.assistant.research.lookup',return_value=[{'text':'Evidence'}]) as fetch:
+            research(client,"I'm playing Guild Wars 2. Explain this mastery track, its unlock requirements, and how to progress it: Griffon Mount. Research the official wiki.",[])
+        fetch.assert_called_once_with('Guild Wars 2','Griffon Mount')
+
+    def test_public_typographic_dash_allowed_but_url_still_blocked(self):
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'League Slayer—Conquest'})
+        with patch('waypoint.assistant.research.lookup',return_value=[]) as fetch:
+            research(client,'Research this',[])
+        fetch.assert_called_once_with('Guild Wars 2','League Slayer-Conquest')
+
+    def test_map_followup_preserves_established_subject(self):
+        from types import SimpleNamespace
+        resources=SimpleNamespace(_research_topic={'game':'Guild Wars 2','query':"Dragon's Stand"},cached_lookup=MagicMock(return_value=[{'text':'Evidence'}]))
+        client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'Instance'})
+        research(client,'What kind of map completion is this?',[],resources=resources)
+        self.assertEqual(resources.cached_lookup.call_args.args[1],"Dragon's Stand")

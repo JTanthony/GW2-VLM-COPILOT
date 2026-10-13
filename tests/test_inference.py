@@ -57,6 +57,13 @@ class InferenceTests(unittest.TestCase):
         prompt='Player question: What are the requirements?\nDistinguish article facts from current screen evidence.\n'+json.dumps([article])
         result=compact(prompt,3)
         self.assertIn(row,result); self.assertNotIn('focus_text',result)
+    def test_planner_json_dialogue_trimmed_without_dropping_question(self):
+        from waypoint.inference.budget import compact
+        task={'question':'Current named question','dialogue':[{'role':'assistant','text':'old'*2000}], 'previous_lookup':{'query':'Gliding'}}
+        result=compact('Planner instructions\n'+json.dumps(task),2)
+        self.assertIn('Current named question',result); self.assertIn('Gliding',result)
+        self.assertNotIn('oldold',result)
+
     def test_bad_observation_rejected(self):
         with self.assertRaises(ValueError): validate_observation('{"summary":"incomplete"}')
     def test_stop_only_owned_process(self):

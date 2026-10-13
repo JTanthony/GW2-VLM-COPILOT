@@ -19,7 +19,7 @@ def gw2_topic(query):
 
 def named_subject(question):
     """Extract an explicitly supplied task name, not a guessed location."""
-    patterns=(r'(?i)(?:whether it is still available|what it does|its encounter instead|active now):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
+    patterns=(r'(?i)(?:whether it is still available|what it does|its encounter instead|active now|how to progress it):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
               r'(?i)\b(?:achievement|mastery|event)\s+(?:called|named)\s+["“]?([^"”?.]+)')
     for pattern in patterns:
         match=re.search(pattern,question)
@@ -82,7 +82,7 @@ class WikiText(HTMLParser):
     """Convert API article fragments, including tables, into inert text."""
     def __init__(self):
         super().__init__(); self.blocked=0; self.parts=[]; self.headers=[]; self.heading=None
-        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None; self.row_cells=None; self.cell=None; self.columns=[]; self.rows=[]; self.section=''; self.section_parts=None; self.fields=[]
+        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None; self.row_cells=None; self.cell=None; self.columns=[]; self.rows=[]; self.section=''; self.section_parts=None; self.fields=[]; self.section_notes={}; self.note=None; self.definition=None; self.definition_label=None
     def handle_starttag(self,tag,attrs):
         classes=dict(attrs).get('class','').split()
         if self.skipped_divs:
@@ -93,6 +93,9 @@ class WikiText(HTMLParser):
             return
         if tag in ('script','style','nav'): self.blocked+=1
         if self.blocked or self.skipped_divs: return
+        if tag in ('dt','dd'): self.definition=[]
+        if tag=='table': self.columns=[]
+        if tag in ('p','li'): self.note=[]
         if tag in ('h2','h3'): self.section_parts=[]
         if tag=='img':
             label=dict(attrs).get('alt','').strip()
@@ -111,15 +114,25 @@ class WikiText(HTMLParser):
             if tag==self.skipped_tag: self.skipped_divs-=1
             return
         if self.blocked: return
+        if tag in ('dt','dd') and self.definition is not None:
+            value=' '.join(self.definition).strip()
+            if tag=='dt': self.definition_label=value
+            elif self.definition_label and self.definition_label.casefold() in ('type','levels','region','track','tier','experience','connects to'):
+                self.fields.append(self.definition_label+': '+value)
+            self.definition=None
+        if tag in ('p','li') and self.note is not None:
+            value=' '.join(self.note).strip()
+            if re.search(r'(?i)\b(?:unlock|complete|enter|earn)\b',value): self.section_notes.setdefault(self.section,[]).append(value[:500])
+            self.note=None
         if tag in ('h2','h3') and self.section_parts is not None:
             self.section=' '.join(self.section_parts).strip(); self.section_parts=None
         if tag in ('td','th') and self.cell is not None:
             if self.row_cells is not None: self.row_cells.append(' '.join(self.cell).strip())
             self.cell=None
         if tag=='tr' and self.row_cells:
-            if len(self.row_cells)==2 and self.row_cells[0].casefold() in ('region','track','tier','experience'):
+            if len(self.row_cells)==2 and self.row_cells[0].casefold() in ('type','levels','region','track','tier','experience','connects to'):
                 self.fields.append(self.row_cells[0]+': '+self.row_cells[1])
-            if any(re.search(r'(?i)\b(?:xp required|experience|reward tier|points)\b',c) for c in self.row_cells): self.columns=list(self.row_cells)
+            if any(c.casefold() in ('xp required','reward tier','points') for c in self.row_cells) and len(self.row_cells)>2: self.columns=list(self.row_cells)
             elif self.columns and len(self.row_cells)==len(self.columns):
                 self.rows.append({'section':self.section,'cells':list(self.row_cells),'columns':list(self.columns)})
             self.row_cells=None
@@ -138,6 +151,8 @@ class WikiText(HTMLParser):
             if self.heading is not None: self.heading.append(value)
             if self.cell is not None: self.cell.append(value)
             if self.section_parts is not None: self.section_parts.append(value)
+            if self.note is not None: self.note.append(value)
+            if self.definition is not None: self.definition.append(value)
 
 def wiki_json(host,api,params):
     connection=PinnedHTTPS(host,timeout=12,context=ssl.create_default_context())
@@ -185,7 +200,10 @@ def lookup(game,query):
             'gsrlimit':2,'prop':'extracts','explaintext':1,'exchars':6000,'formatversion':2}
     topic=gw2_topic(query) if game=='Guild Wars 2' else None
     subject=exact_subject(query)
-    regional={'Turtle Mount':'End of Dragons mastery tracks','Fishing':'End of Dragons mastery tracks'}
+    regional={**dict.fromkeys(('Turtle Mount','Fishing','Arborstone Revitalization','Jade Bots','Skiff Piloting'),'End of Dragons mastery tracks'),
+              **dict.fromkeys(('Gliding','Itzel Lore','Exalted Lore','Nuhoch Lore','Raids'),'Heart of Thorns mastery tracks'),
+              **dict.fromkeys(('Raptor Mount','Springer Mount','Skimmer Mount','Jackal Mount','Griffon Mount','Roller Beetle Mount','Skyscale Mount','Crystal Champion'),'Path of Fire mastery tracks'),
+              'Warclaw Mount':'Janthir Wilds mastery tracks'}
     mapped=next((page for name,page in regional.items() if name.casefold()==subject.casefold()),None)
     if game=='Guild Wars 2' and mapped:
         topic=mapped
@@ -211,10 +229,13 @@ def lookup(game,query):
             if not body: continue
             # Index table headings first so long categories retain their item names.
             extract=('Table column headings (not a list of mastery levels) / achievement names:\n'+headings[:4000]+'\nArticle details:\n'+body[:6000]) if headings else body[:10000]
-            selected_rows=[row for row in parser.rows if row['section'].casefold()==subject.casefold() or any(cell.casefold()==subject.casefold() for cell in row['cells'])]
+            section_subject=re.sub(r'(?i) Mount$','',subject)
+            selected_rows=[row for row in parser.rows if (row['section'].casefold() in (subject.casefold(),section_subject.casefold()) or any(cell.casefold()==subject.casefold() for cell in row['cells'])) and row['cells'][0].casefold()!='total']
             focus='\n'.join('Section: '+row['section']+' | '+' | '.join(label+': '+value for label,value in zip(row['columns'],row['cells'])) for row in selected_rows)
-            if not focus and title.casefold()==subject.casefold() and parser.fields:
-                focus='Subject: '+title+' | '+' | '.join(parser.fields)
+            notes=next((values for name,values in parser.section_notes.items() if name.casefold() in (subject.casefold(),section_subject.casefold())),[])
+            if notes: focus='Unlock context: '+' '.join(notes[:2])+'\n'+focus
+            if title.casefold()==subject.casefold() and parser.fields:
+                focus='Subject: '+title+' | '+' | '.join(parser.fields)+('\n'+focus if focus else '')
             if focus:
                 extract='Requested table evidence (keep row labels and units together):\n'+focus+'\nOther partial article context:\n'+extract[:4000]
             article={'title':title[:200],'text':extract,'details_truncated':section_partial or len(body)> (6000 if headings else 10000) or len(headings)>4000,

@@ -111,3 +111,23 @@ class WebTests(unittest.TestCase):
         with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'Fishing on a Full Tank','pageid':1}]}},{'parse':{'text':html}}]):
             article=lookup('Guild Wars 2','Fishing on a Full Tank mastery')[0]
         self.assertIn('Region: End of Dragons',article['focus_text']); self.assertIn('Experience: 1,016,000',article['focus_text'])
+
+    def test_mount_alias_keeps_unlock_and_excludes_total_level(self):
+        html='<h3>Griffon</h3><p>Complete the collection to unlock.</p><table><tr><th>Mastery</th><th>XP required</th><th>Points</th><th>Description</th></tr><tr><td>Soaring Rescue</td><td>100</td><td>2</td><td>Rescue</td></tr><tr><th>Total</th><td>100</td><td>2</td><td></td></tr></table>'
+        with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':html}}) as fetch:
+            article=lookup('Guild Wars 2','Griffon Mount mastery track')[0]
+        self.assertEqual(fetch.call_args.args[2]['page'],'Path of Fire mastery tracks')
+        self.assertIn('Complete the collection',article['focus_text'])
+        self.assertIn('Mastery: Soaring Rescue',article['focus_text'])
+        self.assertNotIn('Mastery: Total',article['focus_text'])
+
+    def test_map_type_kept_in_priority_evidence(self):
+        html='<table><tr><th>Type</th><td>Zone</td></tr><tr><th>Region</th><td>Horn of Maguuma</td></tr></table><p>Gift is not from map completion.</p>'
+        with patch('waypoint.assistant.web_lookup.wiki_json',side_effect=[{'query':{'pages':[{'title':'Inner Nayos','pageid':1}]}},{'parse':{'text':html}}]):
+            article=lookup('Guild Wars 2','Inner Nayos')[0]
+        self.assertIn('Type: Zone',article['focus_text'])
+
+    def test_definition_list_map_identity_retained(self):
+        from waypoint.assistant.web_lookup import WikiText
+        parser=WikiText(); parser.feed('<dl><dt>Type</dt><dd>Zone</dd><dt>Region</dt><dd>Horn of Maguuma</dd></dl>')
+        self.assertEqual(parser.fields,['Type: Zone','Region: Horn of Maguuma'])
