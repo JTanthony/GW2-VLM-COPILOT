@@ -7,6 +7,10 @@ from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_obs
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
+    'For screen-based suggestions, prioritize the current event or explicitly selected achievement. A watch-list entry or browsed map does not prove proximity. '
+    'Separate checked objectives from remaining ones; recommend only supported next steps. Do not call nearly complete achievements easy or nearby without evidence. '
+    'Do not volunteer combat coaching or reminders for events on other maps. '
+
     'Keep the player-selected subject through follow-ups. A related article is not permission to change the goal or expansion. '
     'Retain the player\'s stated time budget, location, solo/group preference and selected task from earlier user turns. Missing facts in a new extract do not erase these constraints. '
     'For masteries, distinguish the track, individual training levels, mount acquisition collections and mastery insights. Region navigation lists are not levels. XP and mastery points must match the track\'s region; do not suggest another region\'s points as interchangeable. '

@@ -1,6 +1,7 @@
 """Bounded in-memory capture feed. Capture rate is separate from inference rate."""
 import threading,time
 from .graphics import WindowCapture
+from .progress import ProgressGate
 
 class Feed:
     def __init__(self,target,assistant,inference_lock,question_pending,fps=2,max_width=1280,review_callback=None,frame_callback=None):
@@ -66,7 +67,7 @@ class Feed:
                 except Exception as exc:
                     with self.lock: self.error='Capture shutdown failed: '+str(exc)
     def observe_loop(self):
-        seen=None; next_analysis=0
+        seen=None; next_analysis=0; gate=ProgressGate()
         while not self.stop_event.wait(.1):
             if self.question_pending.is_set(): continue
             if time.monotonic()<next_analysis: continue
@@ -75,6 +76,10 @@ class Feed:
             if stamp==seen: continue
             with self.inference_lock:
                 if self.stop_event.is_set() or self.question_pending.is_set(): continue
+                # Refresh after waiting: never analyze a frame queued behind a chat request.
+                try: stamp,png=self.snapshot(max_age=2)
+                except RuntimeError: continue
+                if not gate.due(png,time.monotonic()): continue
                 analysis_started=time.monotonic()
                 try:
                     with self.lock: self.analyzing=True
@@ -90,4 +95,4 @@ class Feed:
                 finally:
                     with self.lock: self.analyzing=False
                 seen=stamp
-                next_analysis=time.monotonic()+3
+                next_analysis=time.monotonic()+5

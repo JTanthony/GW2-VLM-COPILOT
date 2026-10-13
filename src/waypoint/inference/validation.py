@@ -28,6 +28,8 @@ Do not recommend actions in this observation. Be brief: each string at most 120 
 visible_text at most 8 important entries, warnings at most 3, and summary one short sentence."""
 PROMPT += '\nDo not invent levels, HP percentages, mana, currency or enemy warnings. Never estimate precise numbers from bar lengths. Include numeric stats only when their digits and meaning are clearly readable; otherwise omit them. Prioritize relevant UI text over decorative labels. Do not confuse account ranks, progression scores or other counters with character levels. Adapt to the visible game or application; fields that do not apply must be null.'
 
+PROMPT += '\nBackground vision scope: nearby achievement and event planning, not combat coaching. Prioritize an open achievement panel: exact name, readable current/maximum count, and which checklist items are checked versus unchecked. Then read the current event objective and counters. A watched achievement is not necessarily nearby; do not infer proximity from the watch list. Story titles such as Dragon Vigil are story objectives, not map names. An achievement category or a browsed world map does not establish the character location. Use null for map unless current location is established. Do not read general chat, combat damage, enemy health, skills or equipment unless explicitly requested. No other-map event reminders. Mark needs_reasoning true for a readable incomplete checklist or current event objective requiring planning; this does not authorize notifications.'
+
 def validate_observation(raw):
     text = raw.strip()
     if text.startswith("```") and text.endswith("```"):
