@@ -7,7 +7,7 @@ from waypoint.version import VERSION
 DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup')
 DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog'}
 DEV_FILES={'AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
-           'run-gw2-wiki-no-account.cmd','stop-gw2-wiki-for-training.cmd',
+           'run-gw2-wiki-for-training-no-account.cmd','stop-gw2-wiki-for-training.cmd',
            'run_text_sessions.py','refresh_gw2_test_catalog.py','benchmark_local.py',
            'playtest_edges.py','playtest_local.py','verify_window_capture.py'}
 def main():
