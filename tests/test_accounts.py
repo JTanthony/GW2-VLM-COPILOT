@@ -5,6 +5,23 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.integrations.accounts import Accounts,get_gw2,connector_for,suggest_games,public_api_for
 
 class AccountTests(unittest.TestCase):
+    def test_saved_reconnect_loads_token_and_refreshes_progress(self):
+        from unittest.mock import MagicMock
+        store=MagicMock(); store.load.return_value='synthetic-key-'+'x'*20
+        account=Accounts(store)
+        with patch('waypoint.integrations.accounts.get_gw2',side_effect=[{'permissions':['account','progression']},[]]) as fetch:
+            account.connect('', 'Guild Wars 2',expected_generation=0)
+        self.assertTrue(account.connection_state()['connected'])
+        store.load.assert_called_once_with('Guild Wars 2')
+        store.save.assert_not_called()
+        self.assertEqual(fetch.call_count,2)
+
+    def test_cancelled_startup_connection_never_calls_api(self):
+        account=Accounts(); account.disconnect()
+        with patch('waypoint.integrations.accounts.get_gw2') as fetch:
+            with self.assertRaisesRegex(RuntimeError,'cancelled'):
+                account.connect('synthetic-key-'+'x'*20,'Guild Wars 2',expected_generation=0)
+        fetch.assert_not_called()
     def test_indicator_requires_session_connection_and_snapshot(self):
         account=Accounts()
         self.assertFalse(account.connection_state()['connected'])

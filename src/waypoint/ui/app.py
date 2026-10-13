@@ -103,12 +103,25 @@ class App:
         self.chat.yview_moveto(0)
         self.root.after(100,self.poll)
         if not smoke and self.auto_updates.get(): self.root.after(1200,lambda:self.check_updates(False))
+        if not smoke: self.restore_saved_account()
         if smoke:
             self.root.after(100,lambda:self.resize_text(1)); self.root.after(200,self.fold); self.root.after(300,self.fold); self.root.after(450,self.close)
     def update_action(self):
         if self.update_available:
             webbrowser.open(self.update_available['url'])
         else: self.check_updates(True)
+    def restore_saved_account(self):
+        with self.accounts.lock: generation=self.accounts.generation
+        def work():
+            try:
+                if not self.accounts.has_saved('Guild Wars 2'): return
+                self.accounts.connect('', 'Guild Wars 2', expected_generation=generation)
+            except Exception:
+                # Cancellation is intentional; do not display a misleading failure.
+                with self.accounts.lock:
+                    if generation!=self.accounts.generation: return
+                self.events.put(('account_restore_failed',None))
+        threading.Thread(target=work,daemon=True).start()
     def check_updates(self,manual=True):
         if self.update_checking or self.closing: return
         if self.update_status_timer is not None:
@@ -178,6 +191,8 @@ class App:
         def request(refresh=False):
             nonlocal running
             if running or not chosen: return
+            # A manual connection supersedes an unfinished startup connection.
+            if not refresh: self.accounts.disconnect()
             value=key.get().strip(); key.delete(0,'end'); running=True
             connect.configure(state='disabled'); update.configure(state='disabled'); key.configure(state='disabled')
             status.configure(text='Updating your account progress...')
@@ -394,6 +409,9 @@ class App:
             while True:
                 kind,value=self.events.get_nowait()
                 if kind=='update_result': self.finish_update_check(value); continue
+                if kind=='account_restore_failed':
+                    if not self.closing: self.append('Waypoint','Could not reconnect your saved account. Open Accounts to try again; your saved key is still available.')
+                    continue
                 if kind=='review_error':
                     if hasattr(self,'recording'): self.recording.set(False)
                     self.append('Waypoint',value); continue
@@ -422,7 +440,7 @@ class App:
         self.root.after(100,self.poll)
     def close(self):
         if self.closing: return
-        self.closing=True; self.cancelled.set(); self.stop_feed()
+        self.closing=True; self.cancelled.set(); self.stop_feed(); self.accounts.disconnect()
         if not self.smoke: preferences.save(ROOT,{'font_size':self.size,'opacity':self.opacity.value,'check_updates_on_launch':self.auto_updates.get()})
         self.status.configure(text='Closing after local work and engine shutdown\u2026')
     def run(self): self.root.mainloop()

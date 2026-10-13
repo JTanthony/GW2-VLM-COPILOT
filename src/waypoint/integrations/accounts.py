@@ -109,7 +109,7 @@ class Accounts:
         if not provider and candidate: return PUBLIC_APIS[candidate]['requirements']
         return (CONNECTORS[provider]['requirements'] if provider else
                 'An official connector for this game has not been added yet. Use window vision and saved goals; account progress will remain unverified.')
-    def connect(self,key,game=None,remember=False):
+    def connect(self,key,game=None,remember=False,expected_generation=None):
         title=game or self.selected_game
         if not title: raise ValueError('Choose the game title before connecting an account.')
         provider=connector_for(title)
@@ -117,7 +117,10 @@ class Accounts:
         if not key: key=self.credentials.load(provider)
         if not key: raise ValueError('Enter a token first. No saved token is available for this game.')
         if not re.fullmatch(CONNECTORS[provider]['key_pattern'],key): raise ValueError('Enter a valid API key in the private field.')
-        with self.lock: generation=self.generation
+        with self.lock:
+            generation=self.generation
+            if expected_generation is not None and generation!=expected_generation:
+                raise RuntimeError('Connection was cancelled.')
         permissions=get_gw2('/v2/tokeninfo',key).get('permissions',[])
         if not {'account','progression'}.issubset(permissions): raise ValueError('The key needs account and progression permissions.')
         records=get_gw2('/v2/account/achievements',key)
