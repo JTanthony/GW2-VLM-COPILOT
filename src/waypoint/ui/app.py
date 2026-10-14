@@ -45,15 +45,18 @@ class App:
         self.busy=False; self.closing=False; self.cancelled=threading.Event(); self.image=None; self.selected_window=None; self.folded=False
         self.shell=tk.Frame(self.root,bg=BG,highlightbackground='#3d5964',highlightthickness=1); self.shell.pack(fill='both',expand=True)
         header=tk.Frame(self.shell,bg=PANEL,height=36); header.pack(fill='x'); header.pack_propagate(False)
+        self.header=header
         logo=tk.Label(header,image=self.header_icon,bg=PANEL); logo.pack(side='left',padx=(8,0))
         title=tk.Label(header,text=APP_NAME,bg=PANEL,fg=TEXT,font=('Segoe UI Semibold',10)); title.pack(side='left',padx=(2,10))
-        self.button(header,'\u00d7',self.close).pack(side='right'); self.fold_button=self.button(header,'\u25be',self.fold); self.fold_button.pack(side='right',pady=(0,2))
-        self.fold_button.configure(font=('Segoe UI', 18),pady=1,)
+        close_button=self.button(header,'\u00d7',self.close); close_button.configure(padx=4,font=('Segoe UI',12)); close_button.pack(side='right')
+        self.fold_button=self.button(header,'\u25be',self.fold); self.fold_button.pack(side='right',pady=(0,2))
+        self.fold_button.configure(font=('Segoe UI', 18),pady=1,padx=5)
         self.pin_button=self.button(header,'\u25c6',self.pin); self.pin_button.pack(side='right')
-        self.pin_button.configure(fg=ACCENT,activeforeground=ACCENT)
+        self.pin_button.configure(fg=ACCENT,activeforeground=ACCENT,padx=4)
         self.opacity=OvalSlider(header,lambda value:self.root.attributes('-alpha',value/100))
         self.opacity.configure(bg=PANEL)
-        self.opacity.pack(side='right',padx=(4,8))
+        # Compensate for narrower buttons so the slider stays in place.
+        self.opacity.pack(side='right',padx=(4,23))
         self.opacity.set(self.settings.get('opacity',96))
         for w in (header,logo,title): w.bind('<ButtonPress-1>',self.drag_start); w.bind('<B1-Motion>',self.drag)
         self.body=tk.Frame(self.shell,bg=BG); self.body.pack(fill='both',expand=True)
@@ -94,6 +97,7 @@ class App:
         self.update_status=tk.Label(self.body,text='',bg=BG,fg=ACCENT,font=('Segoe UI',9),anchor='w',justify='left',wraplength=320)
         self.update_status.grid(row=6,column=0,sticky='ew',padx=10); self.update_status.grid_remove()
         grip=tk.Label(self.shell,text='\u25e2',bg=BG,fg=MUTED,cursor='size_nw_se'); grip.place(relx=1,rely=1,anchor='se')
+        self.resize_grip=grip
         grip.bind('<ButtonPress-1>',self.resize_start); grip.bind('<B1-Motion>',self.resize)
         self.body.bind('<Configure>',self.fit_body)
         self.root.bind('<Escape>',lambda e:self.fold()); self.root.protocol('WM_DELETE_WINDOW',self.close)
@@ -243,8 +247,13 @@ class App:
         self.pin_button.configure(fg=ACCENT if active else MUTED,activeforeground=ACCENT if active else MUTED)
     def fold(self):
         if not self.folded:
-            self.expanded=self.root.geometry(); self.body.pack_forget(); self.root.minsize(320,36); self.root.geometry('320x36'); self.fold_button.configure(text='\u25b8')
+            self.resize_grip.place_forget()
+            self.root.update_idletasks()
+            # Reserve the complete header, including padding, at current DPI.
+            width=max(360,sum(widget.winfo_reqwidth() for widget in self.header.winfo_children())+50)
+            self.expanded=self.root.geometry(); self.body.pack_forget(); self.root.minsize(width,36); self.root.geometry(f'{width}x36'); self.fold_button.configure(text='\u25b8')
         else:
+            self.resize_grip.place(relx=1,rely=1,anchor='se')
             self.body.pack(fill='both',expand=True); self.root.minsize(360,300); self.root.geometry(self.expanded); self.fold_button.configure(text='\u25be')
         self.folded=not self.folded
     def select_window(self):

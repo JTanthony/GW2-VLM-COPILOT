@@ -80,11 +80,8 @@ class OvalSlider(tk.Canvas):
         self.value = max(55, min(100, float(value)))
         self.delete('all')
         x = 8 + (self.value - 55) / 45 * 50
-        # Overlapping circles and a rectangle form an oval-ended track.
-        for left, right, color in ((8, 58, '#40515b'),):
-            self.create_oval(left - 3, 7, left + 3, 13, fill=color, outline='')
-            self.create_rectangle(left, 7, right, 13, fill=color, outline='')
-            self.create_oval(right - 3, 7, right + 3, 13, fill=color, outline='')
+        # One stroke avoids the seams between separate end caps and rectangle.
+        self.create_line(8,10,58,10,fill='#40515b',width=6,capstyle=tk.ROUND)
         self.create_image(x, 10, image=self.thumb)
         self.command(self.value)
 
