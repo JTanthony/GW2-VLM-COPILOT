@@ -24,7 +24,7 @@ class ReviewTests(unittest.TestCase):
     def test_frame_limit_disables_recording_without_writing(self):
         import time
         with tempfile.TemporaryDirectory() as folder:
-            log=VisionReview(folder); log.set_enabled(True); log.frame_bytes=5_000_000_000
+            log=VisionReview(folder); log.set_enabled(True); log.frame_bytes=25_000_000_000
             with self.assertRaises(OSError): log.save_frame(time.monotonic(),b'png')
             self.assertFalse(log.enabled); self.assertFalse(log.path.with_suffix('').exists())
 

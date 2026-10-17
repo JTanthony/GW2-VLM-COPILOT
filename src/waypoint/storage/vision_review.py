@@ -33,9 +33,9 @@ class VisionReview:
         with self.lock:
             if not self.enabled: return None
             if stamp in self.frames: return self.frames[stamp]
-            if time.monotonic()-self.started>3600 or self.frame_bytes+len(png)>5_000_000_000:
+            if time.monotonic()-self.started>3600 or self.frame_bytes+len(png)>25_000_000_000:
                 self.enabled=False
-                raise OSError('Development recording reached its one-hour or 5 GB limit.')
+                raise OSError('Development recording reached its one-hour or 25 GB limit.')
             folder=self.path.with_suffix(''); folder.mkdir(exist_ok=True)
             filename=f'frame-{len(self.frames)+1:06d}.png'
             (folder/filename).write_bytes(png)

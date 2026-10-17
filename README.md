@@ -66,7 +66,7 @@ Run stop-gw2-wiki-for-training.cmd to stop. Active inference finishes before the
 
 Results stay in `local-data/text-playtests`. Keep account-derived logs private. These runs generate material for review; they do not automatically train either model. 
 
-Vision training is an optional development tool reserved only in the source file launcher. Recordings stay in `local-data/vision-review` and stop after 1 hour minutes or 5 GB. It is disabled by default in the standard Windows release and data is only stored in ram.
+Vision training is an optional development tool reserved only in the source file launcher. Recordings stay in `local-data/vision-review` and stop after 1 hour or 25 GB. It is disabled by default in the standard Windows release and data is only stored in ram.
 
 Once logged an enterprise model such as GPT SOL 6.1 will provide stronger python training rules. Once complete push to upload.
 

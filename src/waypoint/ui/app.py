@@ -103,7 +103,7 @@ class App:
         self.root.bind('<Escape>',lambda e:self.fold()); self.root.protocol('WM_DELETE_WINDOW',self.close)
         self.append('Waypoint',WELCOME)
         if self.review:
-            self.append('Waypoint','Development vision recording enabled: '+str(self.review.directory)+'. Frames and visible text are saved locally, up to one hour or 5 GB.')
+            self.append('Waypoint','Development vision recording enabled: '+str(self.review.directory)+'. Frames and visible text are saved locally, up to one hour or 25 GB.')
         self.chat.yview_moveto(0)
         self.root.after(100,self.poll)
         if not smoke and self.auto_updates.get(): self.root.after(1200,lambda:self.check_updates(False))
@@ -285,7 +285,7 @@ class App:
                 from waypoint.storage.vision_review import VisionReview
                 self.review=VisionReview(ROOT)
             self.review.set_enabled(self.recording.get())
-            self.append('Waypoint','Development recording '+('ON: frames and chat saved locally, up to one hour or 5 GB. '+str(self.review.directory) if self.review.enabled else 'OFF. Existing recordings remain locally.'))
+            self.append('Waypoint','Development recording '+('ON: frames and chat saved locally, up to one hour or 25 GB. '+str(self.review.directory) if self.review.enabled else 'OFF. Existing recordings remain locally.'))
         except OSError:
             self.recording.set(False); self.append('Waypoint','Could not start development recording.')
     def record_frame(self,stamp,png):
