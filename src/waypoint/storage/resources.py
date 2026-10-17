@@ -79,10 +79,10 @@ class Resources:
     def cached_lookup(self,game,query,fetch):
         directory=self.ensure(game)/'references'; key=hashlib.sha256(query.encode()).hexdigest()
         path=directory/(key+'.json'); record=self.read(path,{})
-        if isinstance(record,dict) and record.get('extract_version')==8 and record.get('game')==game and record.get('query')==query and isinstance(record.get('articles'),list):
+        if isinstance(record,dict) and record.get('extract_version')==9 and record.get('game')==game and record.get('query')==query and isinstance(record.get('articles'),list):
             stamp=record.get('fetched_at',0)
             if isinstance(stamp,(int,float)) and 0<=time.time()-stamp<86400:
                 return record['articles']
         articles=fetch(game,query)
-        if articles: self.write(path,{'extract_version':8,'game':game,'query':query,'fetched_at':time.time(),'articles':articles})
+        if articles: self.write(path,{'extract_version':9,'game':game,'query':query,'fetched_at':time.time(),'articles':articles})
         return articles

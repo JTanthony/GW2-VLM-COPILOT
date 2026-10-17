@@ -22,6 +22,7 @@ def research(client,question,history,observation=None,window_title='',progress=N
             'The selected game and resource project are additional context. Resolve "this zone" from the dated observation or dialogue, and "just search online" from the preceding user request. '
             'An explicit search request for a supported game requires a lookup plan. Prior assistant claims that research is unavailable are incorrect and must not influence this decision. '
             'For a list request, search for the named region/category and requested collection, such as achievements; prefer the category page over individual tasks. '
+            'A bare item name is a factual lookup request, not ordinary conversation. For item questions use the exact item name as query; research acquisition, uses and recipes from its wiki page. If the name is ambiguous, identify variants instead of choosing one without evidence. '
             'For factual questions about supported subjects, including mechanics, tasks, items, or public integrations, generate a short relevant search phrase. '
             'Query should be a short subject name, usually 1-6 words. Do not append speculative requirements, rewards, locations or mechanics. '
             'For follow-ups, resolve the subject from prior USER questions; prior assistant facts may be wrong. '

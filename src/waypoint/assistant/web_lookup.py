@@ -82,9 +82,16 @@ class WikiText(HTMLParser):
     """Convert API article fragments, including tables, into inert text."""
     def __init__(self):
         super().__init__(); self.blocked=0; self.parts=[]; self.headers=[]; self.heading=None
-        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None; self.row_cells=None; self.cell=None; self.columns=[]; self.rows=[]; self.section=''; self.section_parts=None; self.fields=[]; self.section_notes={}; self.note=None; self.definition=None; self.definition_label=None
+        self.achievement_row=False; self.item_names=[]; self.first_heading=False; self.skipped_divs=0; self.skipped_tag=None; self.row_cells=None; self.cell=None; self.columns=[]; self.rows=[]; self.section=''; self.section_parts=None; self.fields=[]; self.section_notes={}; self.note=None; self.definition=None; self.definition_label=None; self.item_ids=[]
     def handle_starttag(self,tag,attrs):
         classes=dict(attrs).get('class','').split()
+        if tag=='a':
+            # Read only the numeric ID in an official API link, never fetch href.
+            href=dict(attrs).get('href','')
+            match=re.fullmatch(r'https://api\.guildwars2\.com/v2/items(?:/(\d+)|\?ids=([\d,]+)(?:&lang=en)?)',href)
+            if match:
+                for value in (match.group(1) or match.group(2)).split(','):
+                    if len(self.item_ids)<8 and int(value)>0: self.item_ids.append(int(value))
         if self.skipped_divs:
             if tag==self.skipped_tag: self.skipped_divs+=1
             return
@@ -248,6 +255,16 @@ def lookup(game,query):
                 if declared:
                     article['declared_item_count']=int(declared.group(1))
                     article['item_count_matches']=article['declared_item_count']==len(article['item_names'])
+            if game=='Guild Wars 2' and parser.item_ids:
+                try:
+                    from waypoint.integrations.items import item_records
+                    records=item_records(parser.item_ids)
+                except Exception:
+                    records=[]  # Wiki evidence remains useful during API outages.
+                if records:
+                    item_text='Public item metadata (not inventory; vendor_value is copper, not trading-post price): '+json.dumps(records,ensure_ascii=False)
+                    article['text']=item_text+'\n'+article['text']
+                    article['focus_text']=item_text+'\n'+article.get('focus_text','')
             articles.append(article)
     return articles
 

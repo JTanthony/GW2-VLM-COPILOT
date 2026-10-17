@@ -7,6 +7,9 @@ from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_obs
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
+    'Public item metadata describes an item, never player ownership. Never infer inventory from an item lookup. Vendor value is copper and is not a live trading-post price. '
+    'For item questions, explain acquisition and uses only from the relevant wiki evidence; distinguish similarly named variants and ask which one if needed. Do not recommend selling, salvaging or discarding before checking documented collection or crafting uses and the player goal. '
+
     'A table Total row is an aggregate, never a mastery level. Mastery points are spent, not earned as a reward for training. Train one selected level at a time in the matching region. '
     'Map Type and current topic must survive follow-ups; a group event or missing map-completion gift does not turn an open-world zone into an instance. '
     'Base gliding unlocks, the Heart of Thorns gliding mastery track and WvW ability upgrades are separate paths. Do not merge their prerequisites. '
