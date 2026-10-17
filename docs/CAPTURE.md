@@ -62,3 +62,20 @@ Frame records carry capture timestamps. Question records link the recent frame a
 Recording is OFF on normal launch. It stops when disabled, on app exit, or after one hour/25 GB of images, whichever comes first. Text log size is capped near 20 MB. Restart recording for a new session. Existing files remain until manually deleted. Saved screenshots can contain private screen information and are not redacted. Credential-like text fields are sanitized and account snapshots excluded. Keep recordings out of Git/releases. This is review-data collection, not automatic model training.
 
 The release privacy rule and source-development exception are maintained in [AGENTS.md](../AGENTS.md).
+# Achievement-count introduction
+
+Once per approved vision session, the app can announce the completed/total
+count for a supported dedicated map category. It waits for two distinct,
+consistent observations and an active Guild Wars 2 account snapshot. It skips
+map browsing, options and uncertain locations. Season 1 uses separately labeled
+episode categories only when an active episode header is explicitly read; it
+does not assign episode achievements to a nearby map. Unsupported locations or
+missing accounts produce no automatic count, not a guessed 0/0.
+
+Counts are calculated in application code using unique achievement IDs and
+`done=true`. The message includes the snapshot timestamp and states that progress
+is not live. No extra model generation or account refresh is needed. Pause or
+stopping vision prevents delivery; a newly approved capture session can produce
+one new introduction. Map changes within a session do not trigger repeated
+messages. Combat coaching and other-map reminders remain disabled.
+

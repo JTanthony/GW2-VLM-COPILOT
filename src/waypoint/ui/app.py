@@ -16,6 +16,8 @@ from waypoint.capture.feed import Feed
 from waypoint.inference.engine import Engine
 from waypoint.inference.client import Client
 from waypoint.assistant.local import Assistant
+from waypoint.assistant.achievement_intro import AchievementIntro
+from waypoint.integrations.map_achievements import load_table
 from waypoint.integrations.accounts import Accounts,connector_for,suggest_games,public_api_for
 from waypoint.assistant.routing import is_greeting,needs_screen,force_new_analysis,is_research_request
 ROOT=data_root()
@@ -276,6 +278,8 @@ class App:
         dialog.transient(self.root); dialog.grab_set()
     def start_feed(self):
         if self.selected_window and self.assistant and not self.feed:
+            try: self.achievement_intro=AchievementIntro(load_table())
+            except (OSError,ValueError,KeyError): self.achievement_intro=None
             self.feed=Feed(self.selected_window,self.assistant,self.inference_lock,self.question_pending,max_width=self.engine.config.get('capture_max_width',1280) if self.engine else 1280,review_callback=self.record_review if not getattr(sys,'frozen',False) else None,frame_callback=self.record_frame if not getattr(sys,'frozen',False) else None)
             self.feeds.append(self.feed); self.feed.start()
     def toggle_recording(self):
@@ -412,6 +416,21 @@ class App:
         self.status.configure(text='Waiting for local model\u2026')
         threading.Thread(target=work,daemon=True).start()
     def cancel(self): self.cancelled.set(); self.cancel_button.configure(state='disabled'); self.status.configure(text='Cancelling: current request finishes, then its result is discarded.')
+    def announce_achievement_count(self):
+        intro=getattr(self,'achievement_intro',None)
+        if not intro or intro.sent or self.busy or self.closing or not self.feed: return
+        try: self.feed.snapshot(max_age=2)
+        except RuntimeError: return
+        observation,age,stamp=self.feed.observation_context(max_age=90,include_stamp=True)
+        with self.accounts.lock:
+            snapshot=self.accounts.snapshot if self.accounts.key and self.accounts.selected_game=='Guild Wars 2' else None
+        if snapshot is None: return
+        message=intro.consider(observation,stamp,snapshot)
+        if message:
+            self.append('Waypoint',message)
+            self.assistant.history.append({'role':'assistant','text':message})
+            self.assistant.history=self.assistant.history[-12:]
+            self.record_review('achievement_intro',answer=message,observation=observation,frame_stamp=stamp)
     def poll(self):
         self.update_account_indicator()
         try:
@@ -437,6 +456,7 @@ class App:
             detail=f'last analyzed frame {age:.0f}s old' if age is not None else ('analyzing first frame\u2026' if state['analyzing'] else 'waiting for game frames')
             self.status.configure(text=(state['vision_error'] or state['capture_error'] or f"Vision \u00b7 {state['frames_captured']} frames \u00b7 "+detail)[:180])
         if time.monotonic()-self.last_vision_status>=1:
+            self.announce_achievement_count()
             state=self.feed.state() if self.feed else {'approved':False}
             state['updated_at']=time.time()
             try: preferences.save_status(ROOT,state)

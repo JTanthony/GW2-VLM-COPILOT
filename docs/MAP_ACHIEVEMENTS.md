@@ -43,7 +43,7 @@ Every category membership and achievement detail is verified against the public 
 
 Machine-readable data: `data/gw2/map_achievements.json`. Refresh manually with `python tools/refresh_map_achievements.py`. This replaces the JSON and this document only after verifying public records. No account calls or credentials are used. The Windows builder includes only this curated public reference.
 
-`category_progress` matches unique achievement IDs against a dated account snapshot. Only `done=true` confirms completion; matching current/max or absent records do not. Unknown maps and missing snapshots yield no result, not 0/0. The automatic vision message is not enabled.
+`category_progress` matches unique achievement IDs against a dated account snapshot. Only `done=true` confirms completion; matching current/max or absent records do not. Unknown maps and missing snapshots yield no result, not 0/0. The approved vision introduction may announce one count after two consistent current-location or explicit episode-header observations. It requires a connected dated account snapshot and never repeats within a capture session.
 
 ## Coverage gaps
 
