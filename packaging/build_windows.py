@@ -8,7 +8,7 @@ DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.pl
 DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog'}
 DEV_FILES={'AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
            'run-gw2-wiki-for-training-no-account.cmd','stop-gw2-wiki-for-training.cmd',
-           'run_text_sessions.py','refresh_gw2_test_catalog.py','benchmark_local.py',
+           'run_text_sessions.py','refresh_gw2_test_catalog.py','refresh_map_achievements.py','benchmark_local.py',
            'playtest_edges.py','playtest_local.py','verify_window_capture.py'}
 def main():
     build=ROOT/'local-data/package-build'
@@ -16,6 +16,9 @@ def main():
     subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--windowed',*exclusions,'--name','GW2-VLM-COPILOT','--paths',str(ROOT/'src'),'--collect-all','windows_capture','--icon',str(ROOT/'assets/branding/gw2-vlm-copilot.ico'),'--distpath',str(build/'dist'),'--workpath',str(build/'work'),'--specpath',str(build/'spec'),str(ROOT/'tools/run_gui.py')],cwd=ROOT,check=True)
     return assemble(build/'dist/GW2-VLM-COPILOT')
 def assemble(folder):
+    reference=folder/'data/gw2/map_achievements.json'
+    reference.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(ROOT/'data/gw2/map_achievements.json',reference)
     for name in ('gw2-vlm-copilot-24.png','gw2-vlm-copilot-32.png','gw2-vlm-copilot.ico'):
         target=folder/'assets/branding'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/branding'/name,target)
     target=folder/'assets/ui/slider-thumb.png';target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/ui/slider-thumb.png',target)
