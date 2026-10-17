@@ -420,11 +420,15 @@ class App:
         intro=getattr(self,'achievement_intro',None)
         if not intro or intro.sent or self.busy or self.closing or not self.feed: return
         try: self.feed.snapshot(max_age=2)
-        except RuntimeError: return
+        except RuntimeError:
+            intro.reason='Waiting for recent game frames'; return
         observation,age,stamp=self.feed.observation_context(max_age=90,include_stamp=True)
         with self.accounts.lock:
             snapshot=self.accounts.snapshot if self.accounts.key and self.accounts.selected_game=='Guild Wars 2' else None
-        if snapshot is None: return
+        if snapshot is None:
+            intro.reason='Connect Accounts for achievement counts'; return
+        if observation is None:
+            intro.reason='Waiting for a recent completed vision pass'; return
         message=intro.consider(observation,stamp,snapshot)
         if message:
             self.append('Waypoint',message)
@@ -454,10 +458,15 @@ class App:
         if self.feed and not self.busy:
             state=self.feed.state(); age=state['observation_age_seconds']
             detail=f'last analyzed frame {age:.0f}s old' if age is not None else ('analyzing first frame\u2026' if state['analyzing'] else 'waiting for game frames')
+            intro=getattr(self,'achievement_intro',None)
+            if intro and not intro.sent: detail+=' | '+intro.reason
             self.status.configure(text=(state['vision_error'] or state['capture_error'] or f"Vision \u00b7 {state['frames_captured']} frames \u00b7 "+detail)[:180])
         if time.monotonic()-self.last_vision_status>=1:
             self.announce_achievement_count()
             state=self.feed.state() if self.feed else {'approved':False}
+            intro=getattr(self,'achievement_intro',None)
+            state['achievement_intro']=intro.reason if intro else 'No active introduction'
+            state['account_connected']=self.accounts.connection_state()['connected']
             state['updated_at']=time.time()
             try: preferences.save_status(ROOT,state)
             except OSError: pass

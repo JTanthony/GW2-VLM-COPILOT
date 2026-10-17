@@ -65,16 +65,17 @@ The release privacy rule and source-development exception are maintained in [AGE
 # Achievement-count introduction
 
 Once per approved vision session, the app can announce the completed/total
-count for a supported dedicated map category. It waits for two distinct,
-consistent observations and an active Guild Wars 2 account snapshot. It skips
-map browsing, options and uncertain locations. Season 1 uses separately labeled
+count for a supported dedicated map category. It requires an active Guild Wars 2 account snapshot. A single readable map
+completion-panel title can trigger a count labeled for the displayed map; other
+location readings require two consistent observations. Options and uncertain
+locations are skipped. Season 1 uses separately labeled
 episode categories only when an active episode header is explicitly read; it
 does not assign episode achievements to a nearby map. Unsupported locations or
 missing accounts produce no automatic count, not a guessed 0/0.
 
 Counts are calculated in application code using unique achievement IDs and
-`done=true`. The message includes the snapshot timestamp and states that progress
-is not live. No extra model generation or account refresh is needed. Pause or
+`done=true`. The message shows only the count; snapshot timing remains in account
+state and the Accounts indicator tooltip. No extra model generation or account refresh is needed. Pause or
 stopping vision prevents delivery; a newly approved capture session can produce
 one new introduction. Map changes within a session do not trigger repeated
 messages. Combat coaching and other-map reminders remain disabled.
