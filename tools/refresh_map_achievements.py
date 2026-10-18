@@ -17,7 +17,7 @@ SEASON_ONE={328:'Flame and Frost',329:'Sky Pirates',43:'Clockwork Chaos',44:"Emi
             62:"Escape from Lion's Arch",65:"The Battle for Lion's Arch"}
 
 def fetch(endpoint):
-    if not endpoint.startswith(('/v2/achievements/groups?ids=', '/v2/achievements/categories?ids=', '/v2/achievements?ids=', '/v2/maps?ids=')):
+    if not endpoint.startswith(('/v2/achievements/groups?ids=', '/v2/achievements/categories?ids=', '/v2/achievements?ids=', '/v2/maps?ids=', '/v2/stories?ids=', '/v2/stories/seasons?ids=', '/v2/quests?ids=')):
         raise ValueError('Unsupported public endpoint.')
     connection=PinnedHTTPS('api.guildwars2.com',timeout=30,context=ssl.create_default_context())
     try:

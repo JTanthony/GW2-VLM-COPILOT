@@ -2,10 +2,12 @@
 import re
 from datetime import datetime,timezone
 from waypoint.integrations.map_achievements import category_progress
+from waypoint.integrations.story_achievements import selected_story
 
 class AchievementIntro:
-    def __init__(self,table):
+    def __init__(self,table,story_table=None):
         self.table=table; self.previous=None; self.seen_stamp=None; self.sent=False
+        self.story_table=story_table
         self.reason='Waiting for map identification'
 
     def consider(self,observation,stamp,snapshot):
@@ -26,6 +28,9 @@ class AchievementIntro:
         if explicit_map: map_name=named[0]
         result=category_progress(map_name,snapshot,self.table) if isinstance(map_name,str) else None
         kind='map'; name=map_name
+        story=selected_story(observation,snapshot,self.story_table) if self.story_table else None
+        if not explicit_map and story and 'completed' in story:
+            result=story;kind='story';name=story['title']
         if result is None:
             # Only an explicitly readable story header qualifies; story missions
             # are never mapped to nearby zones or inferred from watch-list names.
@@ -49,6 +54,7 @@ class AchievementIntro:
             datetime.fromisoformat(result['snapshot_time']).astimezone(timezone.utc)
         except (ValueError,TypeError): return None
         scope=(f"{name}'s dedicated map achievement categories" if kind=='map' else
+               f"{story['category_name']} (story category; selected chapter: {name})" if kind=='story' else
                f"Living World Season 1: {name} (episode category)")
         self.sent=True
         self.reason='Achievement introduction sent'

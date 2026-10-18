@@ -30,7 +30,7 @@ PROMPT += '\nDo not invent levels, HP percentages, mana, currency or enemy warni
 
 PROMPT += '\nBackground vision scope: nearby achievement and event planning, not combat coaching. Prioritize an open achievement panel: exact name, readable current/maximum count, and which checklist items are checked versus unchecked. Then read the current event objective and counters. A watched achievement is not necessarily nearby; do not infer proximity from the watch list. Story titles such as Dragon Vigil are story objectives, not map names. An achievement category or a browsed world map does not establish the character location. Use null for map unless current location is established. Do not read general chat, combat damage, enemy health, skills or equipment unless explicitly requested. No other-map event reminders. Mark needs_reasoning true for a readable incomplete checklist or current event objective requiring planning; this does not authorize notifications.'
 
-PROMPT += '\nIf an active story header explicitly displays a Season 1 episode/category name, preserve its exact readable name in visible_text as "Story episode: <name>". Do not infer an episode from a mission, NPC, location, chat, watched achievement or browsed journal. Map must be the current map, not an area label or story title. When the world map is open, preserve its readable completion-panel map title in visible_text as "Map displayed: <exact name>" even if current location is unknown and map is null. Do not substitute area labels for this title.'
+PROMPT += '\nPreserve the exact readable green story-tracker chapter title in visible_text as "Story chapter: <name>". This applies to all supported seasons and expansions. Do not infer an episode from a mission, NPC, location, chat, watched achievement or browsed journal. Map must be the current map, not an area label or story title. When the world map is open, preserve its readable completion-panel map title in visible_text as "Map displayed: <exact name>" even if current location is unknown and map is null. Do not substitute area labels for this title.'
 
 BACKGROUND_SCHEMA=copy.deepcopy(OBSERVATION_SCHEMA)
 BACKGROUND_SCHEMA['properties']['visible_text']['maxItems']=8
@@ -47,7 +47,7 @@ timer: that event's readable timer only; otherwise null.
 visible_text: at most eight short distinct entries. Prefer the map-completion
 panel title as "Map displayed: <exact name>" when the map is open; label counters
 by their icons only if identifiable. A browsed map does not prove player position.
-An active explicitly named story episode may use "Story episode: <exact name>".
+Preserve an exact readable green tracker title as "Story chapter: <exact name>"; it identifies selected story, not confirmed instance entry.
 Never output these prefixes without a readable name; omit unreadable entries.
 Do not convert progress bars into numbers. A displayed percentage is not an
 achievement fraction. Currency requires identifiable denomination icons/labels;
@@ -92,5 +92,6 @@ def validate_observation(raw):
 
 def re_placeholder(value):
     return value.casefold().strip() in ('map displayed: null','story episode: null',
-        'map displayed: unknown','story episode: unknown','map displayed:','story episode:')
+        'map displayed: unknown','story episode: unknown','map displayed:','story episode:',
+        'story chapter: null','story chapter: unknown','story chapter:')
 

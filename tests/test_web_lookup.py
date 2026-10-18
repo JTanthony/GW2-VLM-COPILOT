@@ -5,6 +5,16 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.assistant.web_lookup import lookup,public_addresses,context
 
 class WebTests(unittest.TestCase):
+    def test_inventory_bag_crafting_uses_overview(self):
+        from waypoint.assistant.web_lookup import gw2_topic
+        for question in ('What crafting disciplines crafts inventory bags?', 'Which professions make bags?', 'inventory bag crafting'):
+            self.assertEqual(gw2_topic(question),'Bag')
+        self.assertIsNone(gw2_topic('32-slot bag crafting'))
+        self.assertIsNone(gw2_topic('Glob of Ectoplasm crafting'))
+        with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':'<p>Bags can be crafted by Tailors, Leatherworkers, and Armorsmiths.</p>'}}) as fetch:
+            result=lookup('Guild Wars 2','inventory bag crafting disciplines')
+        self.assertEqual(result[0]['title'],'Bag')
+        self.assertEqual(fetch.call_args.args[2]['page'],'Bag')
     def test_named_gw2_subject_uses_mechanics_page(self):
         with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':'<p>Silver requires fifteen masks.</p>'}}) as fetch:
             articles=lookup('Guild Wars 2','Fallen Masks Silver achievement requirements')

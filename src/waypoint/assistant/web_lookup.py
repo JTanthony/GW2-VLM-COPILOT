@@ -9,6 +9,10 @@ SOURCES={'Guild Wars 2':('wiki.guildwars2.com','/api.php','/wiki/'),
 
 def gw2_topic(query):
     """Resolve known ambiguous regression subjects to their mechanic page, not loot."""
+    if (re.search(r'\b(?:inventory\s+)?bags?\b',query,re.I)
+            and re.search(r'\b(?:craft\w*|disciplines?|professions?)\b',query,re.I)
+            and not re.search(r'\b\d+\s*[- ]?slots?\b',query,re.I)):
+        return 'Bag'
     if query.casefold().strip()=='torn from the sky': return 'Torn from the Sky'
     for pattern,title in ((r'wyvern\s+matri?a(?:r)?ch','Legendary Wyvern Matriarch'),
                           (r'fallen\s+masks','Fallen Masks'),

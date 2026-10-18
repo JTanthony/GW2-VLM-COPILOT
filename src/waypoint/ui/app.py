@@ -18,6 +18,7 @@ from waypoint.inference.client import Client
 from waypoint.assistant.local import Assistant
 from waypoint.assistant.achievement_intro import AchievementIntro
 from waypoint.integrations.map_achievements import load_table
+from waypoint.integrations.story_achievements import load_story_table
 from waypoint.integrations.accounts import Accounts,connector_for,suggest_games,public_api_for
 from waypoint.assistant.routing import is_greeting,needs_screen,force_new_analysis,is_research_request
 ROOT=data_root()
@@ -278,7 +279,7 @@ class App:
         dialog.transient(self.root); dialog.grab_set()
     def start_feed(self):
         if self.selected_window and self.assistant and not self.feed:
-            try: self.achievement_intro=AchievementIntro(load_table())
+            try: self.achievement_intro=AchievementIntro(load_table(),load_story_table())
             except (OSError,ValueError,KeyError): self.achievement_intro=None
             self.feed=Feed(self.selected_window,self.assistant,self.inference_lock,self.question_pending,max_width=self.engine.config.get('capture_max_width',1280) if self.engine else 1280,review_callback=self.record_review if not getattr(sys,'frozen',False) else None,frame_callback=self.record_frame if not getattr(sys,'frozen',False) else None)
             self.feeds.append(self.feed); self.feed.start()
