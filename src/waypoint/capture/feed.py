@@ -84,7 +84,7 @@ class Feed:
                 try:
                     with self.lock: self.analyzing=True
                     if self.frame_callback: self.frame_callback(stamp,png)
-                    observation=self.assistant.observe(png,window_title=self.target.title if self.target else '')
+                    observation=self.assistant.observe(png,window_title=self.target.title if self.target else '',background=True)
                     with self.lock: self.observation=(stamp,observation); self.vision_error=None
                     if self.review_callback:
                         self.review_callback('observation',observation=observation,frame_age_seconds=time.monotonic()-stamp,analysis_seconds=round(time.monotonic()-analysis_started,3),frame_stamp=stamp)

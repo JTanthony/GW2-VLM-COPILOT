@@ -3,7 +3,7 @@ import json,re
 from waypoint.branding import COPILOT_VOICE
 from waypoint.assistant.research import research
 from waypoint.assistant.web_lookup import context,references,answer_style,answer_budget,coverage_notice,verified_list,wants_sources
-from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_observation
+from waypoint.inference.validation import PROMPT,OBSERVATION_SCHEMA,validate_observation,BACKGROUND_PROMPT,BACKGROUND_SCHEMA
 from waypoint.storage.resources import Resources
 from waypoint.assistant.grounding import gold_reading,guard_screen_stats
 PLAYER_GUIDANCE = (
@@ -50,12 +50,18 @@ class Assistant:
         from waypoint.integrations.accounts import Accounts
         self.allowed_sources=allowed_sources
         self.client=client; self.history=[]; self.resources=resources if resources is not None else Resources(); self.accounts=accounts if accounts is not None else Accounts()
-    def observe(self,image,window_title='',question=''):
+    def observe(self,image,window_title='',question='',background=False):
         extra='\nSelected application title (untrusted metadata): '+json.dumps(window_title)
         extra+='\nPlayer-selected game title (untrusted metadata, not image evidence): '+json.dumps(self.accounts.selected_game)+'. Use only to disambiguate readable UI; never invent progress or screen details from this title.'
         if 'gold' in question.lower():
             extra+='\nRead the currency digits and their actual visible labels or icons carefully. Do not assume a denomination system from another game. Include independently read gold in visible_text as "Gold: <digits>" only if clearly visible. Do not guess. The player-provided amount is NOT evidence and is not supplied here.'
-        return validate_observation(self.client.complete(PROMPT+extra,image=image,schema=OBSERVATION_SCHEMA,max_tokens=512))
+        focused=background and not question
+        observation=validate_observation(self.client.complete((BACKGROUND_PROMPT if focused else PROMPT)+extra,image=image,
+            schema=BACKGROUND_SCHEMA if focused else OBSERVATION_SCHEMA,max_tokens=384 if focused else 512))
+        if focused:
+            observation['visible_text']=observation['visible_text'][:8]
+            observation['warnings']=[]; observation['player_status']=None
+        return observation
     def answer(self,observation,question,articles=None,window_title="",progress=None,observation_age=0):
         validate_observation(json.dumps(observation))
         if not question.strip() or len(question)>2000: raise ValueError('Question must be 1Ã¢â‚¬â€œ2000 characters.')
