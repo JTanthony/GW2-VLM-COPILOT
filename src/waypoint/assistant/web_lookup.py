@@ -9,6 +9,12 @@ SOURCES={'Guild Wars 2':('wiki.guildwars2.com','/api.php','/wiki/'),
 
 def gw2_topic(query):
     """Resolve known ambiguous regression subjects to their mechanic page, not loot."""
+    # General discipline questions need the equipment overview, not a literal
+    # full-question search. Keep specific named backpack recipes separate.
+    if (re.search(r'\b(?:backpacks?|back items?)\b',query,re.I)
+            and re.search(r'\b(?:which|what)\s+(?:crafting\s+)?(?:disciplines?|professions?)\b',query,re.I)
+            and not re.search(r"\b(?:named|called|exotic|ascended|legendary|elegant|ambrosial|spinal|horn|quiver)\b",query,re.I)):
+        return "Crafter's backpack"
     if (re.search(r'\b(?:inventory\s+)?bags?\b',query,re.I)
             and re.search(r'\b(?:craft\w*|disciplines?|professions?)\b',query,re.I)
             and not re.search(r'\b\d+\s*[- ]?slots?\b',query,re.I)):

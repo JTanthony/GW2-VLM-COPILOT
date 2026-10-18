@@ -5,6 +5,15 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.assistant.web_lookup import lookup,public_addresses,context
 
 class WebTests(unittest.TestCase):
+    def test_backpack_discipline_question_keeps_equipment_separate_from_bags(self):
+        from waypoint.assistant.web_lookup import gw2_topic
+        question='What crafting disciplines allows for backpack level 80?'
+        self.assertEqual(gw2_topic(question),"Crafter's backpack")
+        self.assertIsNone(gw2_topic('What crafting discipline makes Elegant Scribe\'s Backpack?'))
+        with patch('waypoint.assistant.web_lookup.wiki_json',return_value={'parse':{'text':'<p>Discipline rating 400: required level 78.</p>'}}) as fetch:
+            result=lookup('Guild Wars 2',question)
+        self.assertEqual(fetch.call_args.args[2]['page'],"Crafter's backpack")
+        self.assertIn('required level 78',result[0]['text'])
     def test_inventory_bag_crafting_uses_overview(self):
         from waypoint.assistant.web_lookup import gw2_topic
         for question in ('What crafting disciplines crafts inventory bags?', 'Which professions make bags?', 'inventory bag crafting'):
