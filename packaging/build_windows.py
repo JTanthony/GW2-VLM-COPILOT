@@ -4,9 +4,10 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from waypoint.version import VERSION
-DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup')
-DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog'}
+DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup','waypoint.experiments')
+DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog','experiments'}
 DEV_FILES={'AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
+           'run-qwen-gw2-wiki-for-training-no-account.cmd','stop-qwen-gw2-wiki-for-training-no-account.cmd',
            'run-gw2-wiki-for-training-no-account.cmd','stop-gw2-wiki-for-training.cmd',
            'run_text_sessions.py','refresh_gw2_test_catalog.py','refresh_map_achievements.py','benchmark_local.py',
            'playtest_edges.py','playtest_local.py','verify_window_capture.py','compare_vision_inputs.py','refresh_story_achievements.py'}

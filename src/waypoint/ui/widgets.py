@@ -1,7 +1,29 @@
 import tkinter as tk
+import math
 from pathlib import Path
 from waypoint.paths import app_root
 from .theme import BG,PANEL,TEXT,MUTED,ACCENT
+
+def response_halo(sword, background_color=PANEL):
+    """A quiet golden sun behind the original sword, at the same header size."""
+    width,height=sword.width(),sword.height()
+    image=tk.PhotoImage(width=width,height=height)
+    background=tuple(int(background_color[i:i+2],16) for i in (1,3,5))
+    gold=(245,205,72); radius=min(width,height)*.34
+    for y in range(height):
+        for x in range(width):
+            coverage=0
+            for sy in range(4):
+                for sx in range(4):
+                    dx=x+(sx+.5)/4-width/2; dy=y+(sy+.5)/4-height/2
+                    r=math.hypot(dx,dy); angle=math.atan2(dy,dx)
+                    ring=math.exp(-((r-radius)/.65)**2)*.48
+                    rays=max(0,math.cos(angle*8))**10*math.exp(-((r-radius-1.8)/1.5)**2)*.35
+                    glow=math.exp(-(r/(radius+2))**2)*.13
+                    coverage+=min(.65,ring+rays+glow)/16
+            image.put('#'+''.join(f'{round(b+(g-b)*coverage):02x}' for b,g in zip(background,gold)),(x,y))
+    image.tk.call(str(image),'copy',str(sword),'-compositingrule','overlay')
+    return image
 
 def status_circle(color, diameter=8, background_color=BG):
     """Small native-resolution circle with lightly antialiased edges."""
