@@ -1,6 +1,6 @@
 # Local 4096-token request budget update
 
-Development folder: C:\Users\jthom\Documents\Codex\Waypoint
+Development folder: your local repository checkout.
 
 Text requests now use the local llama.cpp /apply-template and /tokenize endpoints before inference. The app reserves the requested answer length plus 128 tokens of margin within 4096. Oversized requests reduce previous dialogue and select relevant whole wiki passages, then count again. Current questions and system instructions are retained. Shortened evidence is marked partial. Requests still too large are stopped with a useful error. Image requests retain their existing path; this update does not measure image tokens.
 

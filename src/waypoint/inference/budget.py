@@ -24,7 +24,7 @@ def compact(prompt,level):
     start+=len(marker)
     try: articles,end=json.JSONDecoder().raw_decode(prompt[start:])
     except ValueError: return prompt
-    question=re.search(r'Player question: (.*?)(?:Adapt to the game|$)',prompt,re.S)
+    question=re.search(r'Player question: (.*?)(?:\nEnd player question\.|Adapt to the game|$)',prompt,re.S)
     terms=set(re.findall(r'\w{3,}',question.group(1).lower() if question else ''))
     reduced=[]
     for article in articles:

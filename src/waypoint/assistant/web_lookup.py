@@ -2,10 +2,35 @@
 import http.client,ipaddress,json,socket,ssl,re
 from urllib.parse import urlencode,quote
 from html.parser import HTMLParser
+# Compatibility exports: policy belongs to the shared rule set.
+from waypoint.assistant.rules.text import answer_style,answer_budget,is_list_request
 
 SOURCES={'Guild Wars 2':('wiki.guildwars2.com','/api.php','/wiki/'),
          'Minecraft':('minecraft.wiki','/api.php','/w/'),
          'Blish HUD':('blishhud.com','/docs/user/faqs/how-does-bhud-work/','/docs/')}
+
+MAINTENANCE_NOTICE='The official Guild Wars 2 wiki is temporarily down for maintenance. Please try again later.'
+
+class WikiMaintenanceError(ValueError):
+    """Recognized official maintenance response, never article evidence."""
+
+class WikiAPIError(RuntimeError):
+    def __init__(self,code):
+        self.code=code if isinstance(code,str) and re.fullmatch(r'[a-zA-Z0-9_-]{1,60}',code) else 'unknown'
+        super().__init__('Wiki API rejected the lookup: '+self.code)
+
+def maintenance_response(host,raw):
+    if host!='wiki.guildwars2.com' or not isinstance(raw,bytes):return False
+    title=re.search(rb'<title\b[^>]*>([^<]{1,200})</title\s*>',raw,re.I)
+    return bool(title and b' '.join(title.group(1).lower().split())==b'the guild wars wikis are undergoing maintenance.')
+
+def check_wiki_available():
+    """One approved public API check, before long local tests load models."""
+    host,api,_=SOURCES['Guild Wars 2']
+    value=wiki_json(host,api,{'action':'query','format':'json','formatversion':2,'meta':'siteinfo','siprop':'general'})
+    if not isinstance(value,dict) or not isinstance(value.get('query',{}).get('general',{}).get('sitename'),str):
+        raise ValueError('Wiki availability response missing site information.')
+    return True
 
 def gw2_topic(query):
     """Resolve known ambiguous regression subjects to their mechanic page, not loot."""
@@ -176,12 +201,17 @@ def wiki_json(host,api,params):
     try:
         connection.request('GET',api+'?'+urlencode(params),headers={'User-Agent':'Waypoint-Development/0.1 (read-only game wiki lookup)','Accept':'application/json'})
         response=connection.getresponse()
+        if 'application/json' not in response.getheader('Content-Type','').lower():
+            # A bounded title can identify maintenance, never article evidence.
+            if maintenance_response(host,response.read(8192)):raise WikiMaintenanceError(MAINTENANCE_NOTICE)
+            if response.status!=200:raise RuntimeError('Wiki lookup failed (HTTP '+str(response.status)+'); redirects are not followed.')
+            raise ValueError('Wiki did not return JSON text.')
         if response.status!=200: raise RuntimeError('Wiki lookup failed (HTTP '+str(response.status)+'); redirects are not followed.')
-        if 'application/json' not in response.getheader('Content-Type','').lower(): raise ValueError('Wiki did not return JSON text.')
         raw=response.read(1000001)
         if len(raw)>1000000: raise ValueError('Wiki response exceeded the size limit.')
         result=json.loads(raw)
-        if 'error' in result: raise RuntimeError('Wiki API rejected the lookup.')
+        if not isinstance(result,dict):raise ValueError('Wiki API returned invalid data.')
+        if 'error' in result: raise WikiAPIError(result['error'].get('code') if isinstance(result['error'],dict) else None)
         return result
     finally: connection.close()
 
@@ -287,13 +317,6 @@ def context(articles):
 def references(articles):
     return '\n\nSources:\n'+'\n'.join(item['title']+' \u2014 '+item['url'] for item in articles) if articles else ''
 
-def answer_budget(question,articles,history=()):
-    if not articles: return 384
-    import re
-    if re.fullmatch(r'(?i)\s*(?:just\s+)?search\s+online[.!]?\s*',question):
-        question+=' '+' '.join(item.get('text','') for item in history[-6:] if item.get('role')=='user')
-    return 1536 if re.search(r'(?i)\b(list|all|every|exhaustive|comprehensive)\b',question) else 768
-
 def coverage_notice(question,articles,history=()):
     if re.fullmatch(r'(?i)\s*(?:just\s+)?search\s+online[.!]?\s*',question):
         question+=' '+' '.join(item.get('text','') for item in history[-6:] if item.get('role')=='user')
@@ -309,7 +332,7 @@ def verified_list(question,articles,history=()):
     effective=question
     if re.fullmatch(r'(?i)\s*(?:just\s+)?search\s+online[.!]?\s*',question):
         effective+=' '+' '.join(item.get('text','') for item in history[-6:] if item.get('role')=='user')
-    if not re.search(r'(?i)\b(list|all|every)\b',effective): return None
+    if not is_list_request(effective): return None
     if re.search(r'(?i)\b(how|steps?|details?|explain|guide|route|compare|best|requirements?)\b',effective): return None
     categories=[article for article in articles if article.get('item_names')]
     if not categories: return None
@@ -318,22 +341,3 @@ def verified_list(question,articles,history=()):
         names=article['item_names']
         sections.append(article['title']+f' \u2014 {len(names)} retrieved names:\n\n'+'\n'.join('- '+name for name in names))
     return '\n\n'.join(sections)+coverage_notice(effective,categories)
-
-
-def answer_style(question,articles):
-    if not articles: return (
-        '\nKeep this answer concise, normally under 90 words. No public reference extracts were retrieved for this turn. '
-        'Do not claim you researched, checked game documentation or verified game-specific mechanics. '
-        'You may explain general planning principles, but do not invent named achievements, precise unlocks, UI controls, hotkeys or rewards. '
-        'If the player needs specific instructions, ask for the exact game version and named task or acknowledge that the needed reference is unavailable. '
-        'Do not turn an account progress total into a walkthrough or recommend historical/retired content as a currently available goal.')
-    return ('\nLead with the next useful action. Normally stay under 120 words; expand only when the requested walkthrough, comparison or list needs more detail. Do not repeat account totals or previously answered background unless needed. Explain the relevant reference details in your own words. Adapt the explanation to the requested game, application and purpose. For a task, '
-            'give the exact completion requirement, where to start, ordered practical steps, and missable '
-            'conditions or failure triggers ONLY when supported by these extracts. Include rewards if useful '
-            'and supported. Prefer a few useful paragraphs or numbered steps over a vague summary. '
-            'Answer the specific named subject; do not substitute a related topic. For comparisons or research, explain relevant differences and findings rather than inventing task steps. '
-            'If the exact requirement is absent, say which detail could not be verified; never invent it. '
-            'For a list request, list the relevant item names from the category/table evidence. Do not tell the user to collect the list themselves. Distinguish a named category from every achievement anywhere in a zone. If details_truncated=true, details are partial; table headings may still supply the names. Never claim an exhaustive list unless the supplied evidence establishes that scope and count. '
-            'If item_names is supplied, those are the exact parsed table entry names. Reproduce those names, not requirement descriptions or reward labels. Do not invent categories or duplicate an entry under its requirement text. item_names_truncated=false only means all parsed rows were retained, not that the source itself is complete. If item_count_matches=false, explicitly state the source count differs from the retrieved names, label the list partial, and never invent an entry to fill the gap. '
-            'Do not add a Sources section, article titles as citations, or URLs unless the player explicitly '
-            'asks for sources, links or references. Older dialogue containing source lists is not a formatting example.')

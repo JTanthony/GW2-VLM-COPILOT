@@ -1,7 +1,7 @@
 """Local model plans a bounded game lookup; only validated search terms leave the PC."""
 import json,re
-from .routing import is_greeting,is_research_request
-from .web_lookup import SOURCES,lookup,gw2_topic,named_subject
+from .routing import is_social_message,is_research_request
+from .web_lookup import SOURCES,lookup,gw2_topic,named_subject,WikiMaintenanceError,MAINTENANCE_NOTICE,WikiAPIError
 from waypoint.integrations.story_achievements import selected_story
 
 PLAN_SCHEMA={'type':'object','properties':{
@@ -9,7 +9,7 @@ PLAN_SCHEMA={'type':'object','properties':{
     'query':{'type':'string'}},'required':['game','query'],'additionalProperties':False}
 
 def research(client,question,history,observation=None,window_title='',progress=None,resources=None,selected_game='',allowed_sources=None):
-    if is_greeting(question): return [],''
+    if is_social_message(question): return [],''
     # Unspecified starters need a player detail, not a speculative search.
     if not history and re.search(r"(?i)(?:which zone if needed|a zone's achievements|plan some Guild Wars 2 achievements before starting capture|returning after a long break|help me find a challenging achievement|want a useful reward|my goal is explore|have 20 minutes and want a few easy achievements|start an achievement.{0,60}cannot find its first step|nearby goals.{0,80}asking for my location)",question):
         return [],''
@@ -84,9 +84,12 @@ def research(client,question,history,observation=None,window_title='',progress=N
         if progress: progress('Looking up '+game+' references\u2026')
         stage='wiki retrieval'
         articles=resources.cached_lookup(game,query.strip(),lookup) if resources else lookup(game,query.strip())
-        if articles and resources: resources._research_topic={'game':game,'query':query.strip()}
+        if articles:
+            articles=[dict(article,requested_subject=query.strip()) for article in articles]
+            if resources: resources._research_topic={'game':game,'query':query.strip()}
         return articles,('' if articles else '\n\nNo matching wiki reference was found.')
     except Exception as exc:
+        if isinstance(exc,WikiMaintenanceError):return [],'\n\n'+MAINTENANCE_NOTICE
         # Report the failing stage/type, without leaking dialogue, query or credentials into logs.
         safe_reasons={'Invalid lookup plan.':'missing or invalid game/topic',
                      'Search terms failed validation.':'unsupported search punctuation',
@@ -94,4 +97,7 @@ def research(client,question,history,observation=None,window_title='',progress=N
                      'Wiki did not return JSON text.':'unexpected wiki response format',
                      'Wiki article text missing.':'missing article text'}
         reason=safe_reasons.get(str(exc),'request timed out' if isinstance(exc,TimeoutError) else '')
+        if isinstance(exc,WikiAPIError):reason='wiki API error '+exc.code
+        status=re.fullmatch(r'Wiki lookup failed \(HTTP (\d{3})\); redirects are not followed\.',str(exc))
+        if status:reason='wiki HTTP status '+status.group(1)
         return [],f'\n\nOnline lookup failed during {stage} ({type(exc).__name__}).'+(' Reason: '+reason+'.' if reason else '')

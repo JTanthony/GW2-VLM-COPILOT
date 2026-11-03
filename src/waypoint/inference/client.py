@@ -38,6 +38,7 @@ class Client:
         formatted=post('/apply-template',{'messages':messages,'reasoning_effort':'none'})['prompt']
         return len(post('/tokenize',{'content':formatted,'add_special':True})['tokens'])
     def complete(self,prompt,image=None,schema=None,max_tokens=384):
+        self.last_request_stats=None
         content=[{'type':'text','text':prompt}]
         if image:
             raw=image if isinstance(image,bytes) else Path(image).read_bytes()
@@ -56,6 +57,7 @@ class Client:
                 try: count=self.prompt_tokens(payload['messages'])
                 except (KeyError,TypeError,ValueError,HTTPError) as exc:
                     raise ValueError('Could not check local request size. Use the supported llama.cpp server and try again.') from exc
+                self.last_request_stats={'input_tokens':count,'answer_tokens':max_tokens,'compaction_level':level,'context_limit':4096,'budget_ok':count<=allowance}
                 if count<=allowance: break
             else:
                 raise ValueError('This question and its supporting information exceed the 4096-token limit. Please narrow the question or start a fresh conversation.')
