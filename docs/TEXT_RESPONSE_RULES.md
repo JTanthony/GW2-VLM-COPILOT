@@ -27,3 +27,21 @@ Run the shared regression checks from the repository root:
 $env:PYTHONPATH = 'src'
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_text_rules.py'
 ```
+
+## Structured sections
+
+`src/waypoint/assistant/rules/sections.py` reads bounded event reward fields,
+map introduction/access sections and collection rows. Medal tiers are distinct
+from coin units and earned XP. Unsolicited event reward amounts are omitted.
+Achievement completion thresholds are requirements, never account progress.
+Map rewards cannot be reinterpreted as completion objectives. Objective icons
+retain explicit labels; unlabeled numbers never establish counts.
+
+Mastery rows retain per-level costs and listed progression order. XP-source
+questions may add one cached generic Mastery reference; an optional supplement
+failure preserves the retrieved ability evidence. This does not establish the
+player's current training progress. The text tester fingerprints the section
+selector and reminds its simulated player that catalog IDs are not levels.
+
+Reference extraction version 10 refreshes older cached extracts on their next
+lookup, allowing new icon labels to be captured. Historical reports are retained.

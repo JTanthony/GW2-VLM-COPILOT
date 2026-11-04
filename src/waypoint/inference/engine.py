@@ -3,6 +3,12 @@ import json,socket,subprocess,time,sys,ctypes
 from pathlib import Path
 from urllib.request import build_opener,ProxyHandler
 from waypoint.inference.client import NoRedirect
+
+class EnginePortBusyError(RuntimeError):
+    def __init__(self,port):
+        self.port=port
+        super().__init__(f'Local model port {port} is already in use. Let the existing app or text test finish, or stop it with its own Stop control. No existing engine was reused or stopped.')
+
 class Engine:
     def __init__(self,config,root):
         self.config=config; self.root=Path(root); self.process=None; self.log=None
@@ -15,7 +21,7 @@ class Engine:
             if not path.is_file(): raise FileNotFoundError(path)
         port=c['port']
         with socket.socket() as sock:
-            if sock.connect_ex(('127.0.0.1',port))==0: raise RuntimeError('A local engine is already using the Waypoint port. Close other Waypoint windows with ×, then reopen one window. No existing engine was stopped.')
+            if sock.connect_ex(('127.0.0.1',port))==0: raise EnginePortBusyError(port)
         logdir=self.root/'local-data'; logdir.mkdir(exist_ok=True)
         self.log=(logdir/('engine.log' if port==17865 else f'engine-{port}.log')).open('w',encoding='utf-8')
         args=[str(exe),'-m',c['model_path'],'--host','127.0.0.1','--port',str(port),'--alias',c.get('alias','waypoint-gemma'),'-c',str(c.get('context_length',4096)),'-ngl',str(c.get('gpu_layers', 'auto')),'--parallel','1','-b',str(c.get('batch_size',512)),'-ub',str(c.get('physical_batch_size',256)),'--reasoning','off','--no-webui']

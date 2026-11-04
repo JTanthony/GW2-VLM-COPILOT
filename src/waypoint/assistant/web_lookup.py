@@ -32,8 +32,22 @@ def check_wiki_available():
         raise ValueError('Wiki availability response missing site information.')
     return True
 
+def ascended_topic(query):
+    """Route broad equipment categories; preserve named items and recipe requests."""
+    if re.search(r"(?i)\b(?:named|called|recipe|insignia|inscription|salvage|salvaging|stat.?chang\w*)\b|[\"“”]|\w['’]s\b",query):return None
+    rarity=r'\b(?:ascended|acended|asended|ascened)\s+'
+    categories=((r'(?:armor|armour)\b','Ascended armor'),
+                (r'weapons?\b','Ascended weapon'),
+                (r'trinkets?\b','Ascended trinket'),
+                (r'(?:back items?|backpacks?)\b','Ascended back item'),
+                (r'(?:gear|equipment|pieces?)\b','Ascended equipment'))
+    return next((title for pattern,title in categories if re.search(rarity+pattern,query,re.I)),None)
+
+
 def gw2_topic(query):
     """Resolve known ambiguous regression subjects to their mechanic page, not loot."""
+    equipment=ascended_topic(query)
+    if equipment:return equipment
     # General discipline questions need the equipment overview, not a literal
     # full-question search. Keep specific named backpack recipes separate.
     if (re.search(r'\b(?:backpacks?|back items?)\b',query,re.I)
@@ -142,6 +156,8 @@ class WikiText(HTMLParser):
         if tag=='img':
             label=dict(attrs).get('alt','').strip()
             if re.fullmatch(r'(?i)(?:gold|silver|copper)(?: coin)?',label): self.handle_data('['+label.lower()+']')
+            objective=re.fullmatch(r'(?i)(Waypoint|Renown Heart|Point of Interest|Vista|Hero challenge)(?: \(map icon\))?',label)
+            if objective:self.handle_data('['+objective.group(1).lower()+']')
         if tag=='tr':
             self.row_cells=[]
             self.achievement_row=bool(re.fullmatch(r'achievement\d+',dict(attrs).get('data-id','')))
@@ -255,7 +271,9 @@ def lookup(game,query):
     if game=='Guild Wars 2' and mapped:
         topic=mapped
     if topic:
-        result={'query':{'pages':[{'title':topic}]}}
+        # The rarity overview links types but lacks acquisition instructions.
+        titles=[topic,'Ascended armor'] if topic=='Ascended equipment' else [topic]
+        result={'query':{'pages':[{'title':title} for title in titles]}}
     elif game=='Guild Wars 2':
         exact=wiki_json(host,api,{'action':'query','format':'json','formatversion':2,'titles':subject,'redirects':1})
         pages=[p for p in exact.get('query',{}).get('pages',[]) if isinstance(p,dict) and 'missing' not in p and 'invalid' not in p and isinstance(p.get('pageid'),int)]
@@ -269,7 +287,8 @@ def lookup(game,query):
     for page in sorted(result.get('query',{}).get('pages',[]),key=lambda p:p.get('index',0))[:2]:
         title=page.get('title')
         if isinstance(title,str):
-            html,section_partial=article_html(host,api,title,query)
+            article_query=query+' acquisition' if title.startswith('Ascended ') and topic==ascended_topic(query) else 'Mastery experience training' if title=='Mastery' else query
+            html,section_partial=article_html(host,api,title,article_query)
             if not isinstance(html,str): raise ValueError('Wiki article text missing.')
             parser=WikiText(); parser.feed(html)
             body=''.join(parser.parts).strip(); headings='\n'.join(parser.headers)
@@ -334,7 +353,14 @@ def verified_list(question,articles,history=()):
         effective+=' '+' '.join(item.get('text','') for item in history[-6:] if item.get('role')=='user')
     if not is_list_request(effective): return None
     if re.search(r'(?i)\b(how|steps?|details?|explain|guide|route|compare|best|requirements?)\b',effective): return None
-    categories=[article for article in articles if article.get('item_names')]
+    categories=[]
+    for article in articles:
+        if article.get('collection_items') and not re.search(r'(?i)\bachievements?\b',effective):
+            # A collection page's achievement header is not its item checklist.
+            entry=dict(article,item_names=article['collection_items'])
+            entry.pop('declared_item_count',None);entry.pop('item_count_matches',None)
+            categories.append(entry)
+        elif article.get('item_names'):categories.append(article)
     if not categories: return None
     sections=[]
     for article in categories:

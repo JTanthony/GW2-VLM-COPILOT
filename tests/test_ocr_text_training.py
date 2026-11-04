@@ -106,7 +106,7 @@ class QwenTextTrainingTests(unittest.TestCase):
         (root/'config/player.local.json').write_text(json.dumps(player),'utf-8')
         # An unavailable Gemma model must not prevent the Qwen profile test.
         (root/'config/inference.local.json').write_text('{"model_path":"missing-gemma.gguf"}','utf-8')
-        names=('assistant/research.py','assistant/web_lookup.py','assistant/local.py','assistant/rules/text.py','assistant/rules/evidence.py','inference/budget.py','testing/text_sessions.py','testing/test_titles.json')
+        names=('assistant/research.py','assistant/web_lookup.py','assistant/local.py','assistant/rules/text.py','assistant/rules/evidence.py','assistant/rules/sections.py','inference/budget.py','testing/text_sessions.py','testing/test_titles.json')
         for name in names:
             target=root/'src/waypoint'/name;target.parent.mkdir(parents=True,exist_ok=True)
             target.write_bytes((ROOT/'src/waypoint'/name).read_bytes())

@@ -1,5 +1,6 @@
 """Select labeled public facts before inference, independent of either model."""
 import re
+from .sections import body_text,map_context,event_context,collection_names
 
 def focus_articles(question,articles,history=()):
     result=[]
@@ -19,7 +20,7 @@ def focus_articles(question,articles,history=()):
             core=[f"Mastery: {row['Mastery']} | XP required: {row['XP required']} | Points: {row['Points']} (cost)" for row in track_rows]
             effects=[f"Trained effect of {row['Mastery']}: {row['Description'][:180]}" for row in track_rows if row.get('Description')]
             focus='Requested mastery track: '+track_rows[0].get('Section',item['title'])+'\n'+'\n'.join(core)
-            focus+='\nPoints are SPENT, not granted. Each row is one training level; XP is per level, not cumulative. Effects are benefits after training, not exclusive XP sources.'
+            focus+='\nTraining order is the listed order within this track; later levels require earlier levels. Points are SPENT, not granted. Each row is one training level; XP is per level, not cumulative. Effects are benefits after training, not exclusive XP sources.'
             if unlock:focus+='\n'+unlock[:350]
             focus+='\n'+'\n'.join(effects)
             support=''
@@ -39,6 +40,7 @@ def focus_articles(question,articles,history=()):
                 prior=[(m.start(),-len(name),name) for name in names for m in [re.search(r'(?<!\w)'+re.escape(name)+r'(?!\w)',prior_text,re.I)] if m]
                 if prior:requested=min(prior)[2];anchored_goal=True;break
         if requested:
+            standalone=item['title'].casefold()==requested.casefold()
             # Require a real single-line achievement header, not a collection
             # checklist entry or a name in navigation followed by an ellipsis.
             marker=re.search(r'(?m)^[ \t]*\|[ \t]*'+re.escape(requested)+r'[ \t]*\|[^\n]+',text,re.I)
@@ -56,22 +58,33 @@ def focus_articles(question,articles,history=()):
                 prerequisite=re.search(r'Prerequisite:\s*([^|\n]+?)(?=\s+Reward:|\s*\||\n|$)',section,re.I)
                 instance=re.search(r'Story Instance:\s*(.*?)(?=\s+(?:Prerequisite|Reward):|\s*\||\n|$)',section,re.I)
                 focus+='Own objective: '+objective[:400]+'\n'
+                objective_rows=[[c.strip() for c in line.strip().strip('|').split('|')] for line in section.splitlines() if line.strip().startswith('|')]
+                thresholds=[cells[1] for cells in objective_rows[:1] if len(cells)>1 and re.search(r'\d',cells[1])]
+                thresholds+=[cells[0] for cells in objective_rows[1:] if re.match(r'Unlocked\s+\d+\b',cells[0],re.I)]
+                if thresholds:focus+='Completion thresholds (not current player progress): '+'; '.join(thresholds)[:400]+'\n'
+                if standalone:
+                    entries=collection_names(section)
+                    if entries:
+                        item['collection_items']=entries
+                        focus+='Own collection items ('+str(len(entries))+' retrieved names): '+', '.join(entries)+'\n'
                 if instance:focus+='Perform inside story instance: '+instance.group(1).strip()[:160]+'\n'
                 if prerequisite:focus+='Listed prerequisite: '+prerequisite.group(1).strip()[:160]+'\n'
                 # Keep the target's attached walkthrough/eligibility, ending at
                 # the NEXT achievement. Do not drop these or import other rows.
                 note_lines=[line.strip() for line in section.splitlines() if line.strip() and not line.strip().startswith('|')]
-                notes=' '.join(note_lines)[:950]
+                notes=' '.join(note_lines)[:(450 if standalone else 950)]
                 if notes:focus+='Own walkthrough/eligibility notes: '+notes+'\n'
                 if instance:focus+='Story-instance objectives occur inside that instance, not in an invented open-world zone. '
                 focus+='A prerequisite/category is not the objective. Do not infer an expansion, class, prerequisite or availability from the achievement/category name.'
             else:
                 focus+='Evidence status: name confirmed only; its complete objective, walkthrough and availability were not retrieved. Do not invent a guide or infer mechanics from its name/category.'
             support=''
+            availability=re.search(r'(?i)(?:This content|This achievement|These achievements|Daily Lunar New Year)[^\n]{0,220}\b(?:only available during|available during|historical|no longer available)[^\n]{0,180}',body_text(text))
+            if availability:focus+='\nAvailability context: '+availability.group(0).strip()[:300]
         if re.search(r'\bType: Zone\b',focus,re.I):
             # Area-level rows and achievement-category totals are not map
             # completion counts. Icon-only objective counts need proper labels.
-            focus+='\nLevels is area level, not a point total or a verified minimum entry requirement. Objective counts and access instructions not established by these fields.'
+            focus+='\nLevels is area level, not a point total or a verified minimum entry requirement.\n'+map_context(text)
             support=''
         elif re.search(r'\bTrack:',focus) and re.search(r'\b(?:Experience|XP required):',focus):
             after=re.search(r'After completion:\s*(.*?)(?=\n|Before completion:|Notes|[“”]|$)',text,re.S|re.I)
@@ -88,6 +101,9 @@ def focus_articles(question,articles,history=()):
                 if skill:focus+='\nCrafting skill after THIS training tier: '+skill.group(2)+'. This is not the overall discipline maximum or the character level.'
             focus+='\nSubject type: mastery training level, not an achievement. Experience is required training XP, not an exclusive XP source. Use the matching mastery region; the benefit is not an action required before earning XP.'
             support=''
+        event=event_context(question,text,item.get('title','Event'))
+        if event and not requested:
+            focus=event;support=''
         # Preserve reward-table column labels and the CURRENT timer together.
         # Historical added seconds are not a replacement for the infobox time.
         if re.search(r'\bType:?\s+Adventure\b',text,re.I):

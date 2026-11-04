@@ -3,7 +3,7 @@ import argparse,json,socket,sys
 from datetime import datetime,timezone
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; sys.path.insert(0,str(ROOT/'src'))
-from waypoint.inference.engine import Engine
+from waypoint.inference.engine import Engine,EnginePortBusyError
 from waypoint.inference.client import Client
 from waypoint.assistant.local import Assistant
 from waypoint.integrations.accounts import Accounts
@@ -58,7 +58,7 @@ def main(argv=None,*,copilot_profile=None,assistant_factory=Assistant,client_fac
         with socket.socket() as probe:
             probe.settimeout(1)
             if probe.connect_ex(('127.0.0.1',port))==0:
-                parser.error('An app or previous test engine is still active. Close the app and let its engine stop before starting this test. No existing engine was reused or stopped.')
+                parser.error(f'Local model port {port} is already in use. Both text testers share the 1B player; run one tester at a time. Let the existing app/test finish or use its own Stop control. No existing engine was reused or stopped.')
     if source_preflight:
         try:source_preflight()
         except Exception as error:
@@ -75,7 +75,7 @@ def main(argv=None,*,copilot_profile=None,assistant_factory=Assistant,client_fac
     copilot_config=dict(configs['inference']); copilot_config.pop('projector_path',None)
     from waypoint.version import VERSION
     import hashlib
-    review_files=('assistant/research.py','assistant/web_lookup.py','assistant/local.py','assistant/rules/text.py','assistant/rules/evidence.py','inference/budget.py','testing/text_sessions.py',*review_files_extra)
+    review_files=('assistant/research.py','assistant/web_lookup.py','assistant/local.py','assistant/rules/text.py','assistant/rules/evidence.py','assistant/rules/sections.py','inference/budget.py','testing/text_sessions.py',*review_files_extra)
     source_digest=hashlib.sha256(b''.join((ROOT/'src/waypoint'/name).read_bytes() for name in review_files)).hexdigest()
     (out/'run-info.json').write_text(json.dumps({'app_version':VERSION,'review_code_sha256':source_digest,'account_mode':args.account_mode,'game':accounts.selected_game,'snapshot_time':accounts.snapshot.get('fetched_at') if accounts.snapshot else None,'player_model':'Gemma 3 1B IT Q4_K_M','copilot_model':copilot_label,'capture':False,'sessions_limit':args.sessions,'hours_limit':args.hours},indent=2),encoding='utf-8')
     titles=json.loads((ROOT/'src/waypoint/testing/test_titles.json').read_text('utf-8'))
@@ -115,5 +115,12 @@ def main(argv=None,*,copilot_profile=None,assistant_factory=Assistant,client_fac
             copilot=client_factory(f"http://127.0.0.1:{copilot_config['port']}/v1",model=copilot_config.get('alias','waypoint-gemma'),timeout=180)
             summary=run_sessions(player,make_assistant,accounts,out,args.sessions,args.turns,args.hours,args.delay,plans=plans)
             return 1 if summary['errors'] or summary.get('stop_reason')=='source unavailable' else 0
+    except EnginePortBusyError as error:
+        # Another launcher can acquire a port while catalog preparation runs.
+        # Context managers close only engines started by this attempted run.
+        message=str(error)+' Both text testers share the 1B player; run one tester at a time.'
+        (out/'startup-error.json').write_text(json.dumps({'status':'not_started','reason':'engine_port_busy','port':error.port,'message':message},indent=2),encoding='utf-8')
+        print('Test did not start: '+message,file=sys.stderr,flush=True)
+        return 2
     finally: accounts.disconnect()
 if __name__=='__main__': sys.exit(main())

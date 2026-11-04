@@ -58,7 +58,8 @@ The optional `run-qwen-gw2-wiki-for-training-no-account.cmd` uses Gemma 3 1B as
 simulated player and Qwen as answer model. Follow [development setup](DEVELOPMENT.md)
 for the 1B model and `config/player.local.json`. The tester's default Qwen file is
 `local-data/models/qwen3.5-4b/Qwen3.5-4B-Q4_K_M.gguf`; the app's model picker does
-not change this tester path. Close the app and let its engine stop first.
+not change this tester path. Close the app and let its engine stop first. Run only one text tester at a time;
+Gemma and Qwen testers share the same 1B player port (17866).
 
 The tester requires the local inference configuration for server settings but
 does not load Gemma 12B. It refuses occupied app/test ports, checks wiki

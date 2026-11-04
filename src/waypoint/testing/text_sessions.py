@@ -18,6 +18,7 @@ PLAYER_GUIDANCE=(
     'Examples: "Can you help me decide what to do next?" "Does that mean I have completed it?" "I prefer exploration. Which option fits that?" '
     'Respond with JSON containing question. Keep it short, natural and relevant to the given scenario and last reply. '
     'Keep the original player goal throughout this session. Do not adopt an unrelated topic suggested by the assistant. '
+    'Catalog IDs are identifiers, never character, crafting or mastery levels. Preserve the named ability and track; do not replace them with a made-up numbered level. '
     'If asked for your location, goal or preferences, answer using the supplied simulated_player facts or original question before asking a follow-up. '
     'These facts are a fictional test persona, never evidence of real account progress. If a fact is missing, say you do not know it. '
     'Never ask the assistant where it is, what it is struggling with, or which achievement it means. You are the player seeking help. '
