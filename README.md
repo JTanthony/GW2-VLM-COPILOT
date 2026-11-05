@@ -92,7 +92,7 @@ Gemma 4 12B handles answers and vision through a loopback llama.cpp server. Opti
 * Windows only; manual runtime/model setup and hardware tuning.
 * GW2-focused release. Other adapter scaffolding in source does not establish supported titles.
 * Account progress is a dated snapshot, refreshed through Accounts; only an API completion flag confirms completion.
-* Captures require explicit approval. Keep the selected game restored; minimizing pauses capture. Frames are sampled at up to 2 FPS, while model analysis is slower and hardware-dependent.
+* Captures require explicit approval. Keep the selected game restored; minimizing pauses capture. Frames are sampled once every five seconds, while model analysis is slower and hardware-dependent.
 * Text testing does not establish live gameplay accuracy. Earlier development samples averaged about 26 seconds per answer, approximately 48 seconds for GW2; not a benchmark guarantee for this release.
 * No game inputs or microphone listening. No automatic chat coaching. No production installer, automatic updater or validated fine-tuning pipeline yet.
 

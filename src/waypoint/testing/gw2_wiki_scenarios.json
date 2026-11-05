@@ -1,10 +1,285 @@
 [
-  {"name":"GW2 Wyvern location regression","starter":"What area does Wyvern Matriach spawn?","goal":"Ask about the Verdant Brink boss using a natural misspelling. Demand the exact area and route, not chest loot or an unrelated temple.","followups":["Clarify: What region in Verdant Brink?","Ask which waypoint to start from and how to reach the boss.","Ask whether the event is available now or only during a particular map phase.","Challenge an unsupported expansion or temple claim and ask for a wiki check."]},
-  {"name":"GW2 Fallen Masks Silver","starter":"I need help with Fallen Masks: Silver achievement. Research the requirements and give me a practical plan.","goal":"Get verified adventure requirements, location, prerequisites and useful advice without invented spirits or quests.","followups":["Ask for the first travel step and any required unlocks.","Ask what score or completion condition earns Silver.","Ask for a concise attempt checklist and common mistakes."]},
-  {"name":"GW2 Verdant Brink achievement coverage","starter":"Search the official wiki for achievements in Verdant Brink. Give me a useful list here, and say if it is incomplete.","goal":"Avoid refusal to research and distinguish map achievements from story, adventure and collection categories.","followups":["Ask which can realistically be attempted solo in twenty minutes.","Ask which require the night meta or a group.","Ask for requirements and a route for one named option in the reply.","Ask how the list was verified and what might be missing."]},
-  {"name":"GW2 Dug In disambiguation","starter":"How do I complete Dug In? Check the GW2 wiki and explain the actual requirements.","goal":"Do not replace the named achievement with generic Heart of Thorns story advice.","followups":["Ask which location or instance contains the achievement.","Ask for ordered steps and conditions that invalidate it.","Ask what to do if the achievement does not count."]},
-  {"name":"GW2 dated account versus wiki","starter":"Using my connected GW2 progress, suggest one unfinished achievement and research how to complete it.","goal":"Use only supplied API completion flags; research mechanics separately. Never invent account completion or treat a goal as finished.","followups":["Ask whether that is a saved snapshot or live progress.","Ask what prerequisite to check before travel.","Ask how to refresh and confirm completion without sharing my key in chat."]},
-  {"name":"GW2 references without source footer","starter":"Help me research the Verdant Brink night bosses. Explain the useful wiki details in chat without a long sources footer.","goal":"Provide verified area and event-phase information rather than telling the player to leave the game and read a guide.","followups":["Ask for the Matriarch location specifically.","Ask for a short summary instead of repeating the whole guide.","Ask which details are verified and which are uncertain."]},
-  {"name":"GW2 ambiguous followup","starter":"I'm exploring Verdant Brink and prefer exploration over combat. What could I work on?","goal":"Keep follow-ups grounded in the current game and zone without inventing screen access or account unlocks.","followups":["Ask: Which of those is easiest to start?","Ask: Where do I go first?","Ask: Just search online and give me the next step."]},
-  {"name":"GW2 chat without screen","starter":"Hello. I'd like to plan some Guild Wars 2 achievements before starting capture.","goal":"Ordinary chat and wiki research must work without a screen frame; do not claim to see gameplay.","followups":["Ask for a twenty-minute solo exploration plan in Verdant Brink.","Ask which unlocks the plan requires.","Ask the assistant to separate API facts from wiki advice and unknowns."]}
+  {
+    "name": "GW2 ascended mesmer gearing",
+    "starter": "I need acended gear for my mesmer. What can I do to acquire some pieces?",
+    "goal": "Handle a common rarity typo. Research accessible acquisition routes; ask about build, missing slots, owned content and budget without assuming any of them.",
+    "followups": [
+      "Ask which piece is a practical first goal for a small budget.",
+      "Ask whether the suggested stats suit power or condition damage.",
+      "Ask what currency, content access or crafting unlock the chosen route needs.",
+      "Ask for one concrete next step without assuming I own an expansion."
+    ]
+  },
+  {
+    "name": "GW2 Wyvern location regression",
+    "starter": "What area does Wyvern Matriach spawn?",
+    "goal": "Ask about the Verdant Brink boss using a natural misspelling. Demand the exact area and route, not chest loot or an unrelated temple.",
+    "followups": [
+      "Clarify: What region in Verdant Brink?",
+      "Ask which waypoint to start from and how to reach the boss.",
+      "Ask whether the event is available now or only during a particular map phase.",
+      "Challenge an unsupported expansion or temple claim and ask for a wiki check."
+    ]
+  },
+  {
+    "name": "GW2 event reward units",
+    "starter": "What XP, karma and coins do I get for a Gold medal in Escort troops to the Pact encampment at Wren?",
+    "goal": "Keep medal tier, earned XP, karma and coin units separate. Research actual rewards and scaling; never read the medal or XP as currency.",
+    "followups": [
+      "Ask whether Gold means a gold coin reward or a participation medal.",
+      "Ask whether rewards change with character level.",
+      "Ask which conditions affect this escort versus the following event."
+    ]
+  },
+  {
+    "name": "GW2 Fallen Masks Silver",
+    "starter": "I need help with Fallen Masks: Silver achievement. Research the requirements and give me a practical plan.",
+    "goal": "Get verified adventure requirements, location, prerequisites and useful advice without invented spirits or quests.",
+    "followups": [
+      "Ask for the first travel step and any required unlocks.",
+      "Ask what score or completion condition earns Silver.",
+      "Ask for a concise attempt checklist and common mistakes."
+    ]
+  },
+  {
+    "name": "GW2 complete collection checklist",
+    "starter": "Which skins are required for Defiant Glass Weapon Collection? Give me the names here.",
+    "goal": "Use the actual collection-item rows, not the achievement header. Keep availability, acquisition, wardrobe unlocks and account ownership distinct.",
+    "followups": [
+      "Ask whether the reply includes every required skin or only a partial list.",
+      "Ask whether I must equip an item, unlock its skin, or complete another objective.",
+      "Ask how to check what is missing when no account snapshot is connected."
+    ]
+  },
+  {
+    "name": "GW2 Verdant Brink achievement coverage",
+    "starter": "Search the official wiki for achievements in Verdant Brink. Give me a useful list here, and say if it is incomplete.",
+    "goal": "Avoid refusal to research and distinguish map achievements from story, adventure and collection categories.",
+    "followups": [
+      "Ask which can realistically be attempted solo in twenty minutes.",
+      "Ask which require the night meta or a group.",
+      "Ask for requirements and a route for one named option in the reply.",
+      "Ask how the list was verified and what might be missing."
+    ]
+  },
+  {
+    "name": "GW2 story staging versus open world",
+    "starter": "Is Dragon's Stand (Heart of Thorns) the open-world map or a story staging area? How do I get there?",
+    "goal": "Read the specific article description and access instructions instead of treating Type=Zone as proof of an open-world map.",
+    "followups": [
+      "Ask whether completing the previous story chapter is one entry route.",
+      "Ask how to return later and whether another player can bring me.",
+      "Ask whether ordinary open-world map-completion objectives apply here."
+    ]
+  },
+  {
+    "name": "GW2 Dug In disambiguation",
+    "starter": "How do I complete Dug In? Check the GW2 wiki and explain the actual requirements.",
+    "goal": "Do not replace the named achievement with generic Heart of Thorns story advice.",
+    "followups": [
+      "Ask which location or instance contains the achievement.",
+      "Ask for ordered steps and conditions that invalidate it.",
+      "Ask what to do if the achievement does not count."
+    ]
+  },
+  {
+    "name": "GW2 mastery order and individual costs",
+    "starter": "Can I train Skimmer Adaptation in any order? Explain each level and its mastery-point and XP cost.",
+    "goal": "Keep unlock requirements, ordered training levels, per-level XP, point costs and trained effects separate. Do not replace a row with a total.",
+    "followups": [
+      "Ask whether I can skip the first level.",
+      "Ask whether the listed point amounts are spent or awarded.",
+      "Ask whether the XP amounts are cumulative or per level."
+    ]
+  },
+  {
+    "name": "GW2 dated account versus wiki",
+    "starter": "Using my connected GW2 progress, suggest one unfinished achievement and research how to complete it.",
+    "goal": "Use only supplied API completion flags; research mechanics separately. Never invent account completion or treat a goal as finished.",
+    "followups": [
+      "Ask whether that is a saved snapshot or live progress.",
+      "Ask what prerequisite to check before travel.",
+      "Ask how to refresh and confirm completion without sharing my key in chat."
+    ]
+  },
+  {
+    "name": "GW2 mastery XP versus learned ability",
+    "starter": "How do I earn XP for Nine Lives in the Warclaw Mount mastery track?",
+    "goal": "Research regional mastery training mechanics separately from the ability unlocked afterward. Do not invent a requirement to perform the untrained ability.",
+    "followups": [
+      "Ask whether reducing falling damage is required to gain the training XP.",
+      "Ask which region and prerequisite unlock matter.",
+      "Ask for a researched training activity without claiming my current mastery progress."
+    ]
+  },
+  {
+    "name": "GW2 references without source footer",
+    "starter": "Help me research the Verdant Brink night bosses. Explain the useful wiki details in chat without a long sources footer.",
+    "goal": "Provide verified area and event-phase information rather than telling the player to leave the game and read a guide.",
+    "followups": [
+      "Ask for the Matriarch location specifically.",
+      "Ask for a short summary instead of repeating the whole guide.",
+      "Ask which details are verified and which are uncertain."
+    ]
+  },
+  {
+    "name": "GW2 inventory bag crafting",
+    "starter": "Which crafting disciplines make inventory bags, and what should I check before crafting a bigger one?",
+    "goal": "Separate inventory bags from back-slot equipment. Research capacity, account versus character restrictions, recipe requirements and cost without inventing prices.",
+    "followups": [
+      "Ask whether a backpack occupies the same slot as an inventory bag.",
+      "Ask how to compare buying and crafting without live market prices.",
+      "Ask what information is needed for a specific bag recipe."
+    ]
+  },
+  {
+    "name": "GW2 ambiguous followup",
+    "starter": "I'm exploring Verdant Brink and prefer exploration over combat. What could I work on?",
+    "goal": "Keep follow-ups grounded in the current game and zone without inventing screen access or account unlocks.",
+    "followups": [
+      "Ask: Which of those is easiest to start?",
+      "Ask: Where do I go first?",
+      "Ask: Just search online and give me the next step."
+    ]
+  },
+  {
+    "name": "GW2 crafted backpack level",
+    "starter": "What crafting disciplines allow me to make a backpack for a level 80 character?",
+    "goal": "Distinguish crafting rating, item required level, rarity and character level. Research the actual backpack category before promising level-80 equipment.",
+    "followups": [
+      "Ask whether crafting rating 400 means the finished item requires character level 80.",
+      "Ask which exact backpack recipe the advice refers to.",
+      "Ask how to find ascended back-slot options if the crafted item is not what I need."
+    ]
+  },
+  {
+    "name": "GW2 chat without screen",
+    "starter": "Hello. I'd like to plan some Guild Wars 2 achievements before starting capture.",
+    "goal": "Ordinary chat and wiki research must work without a screen frame; do not claim to see gameplay.",
+    "followups": [
+      "Ask for a twenty-minute solo exploration plan in Verdant Brink.",
+      "Ask which unlocks the plan requires.",
+      "Ask the assistant to separate API facts from wiki advice and unknowns."
+    ]
+  },
+  {
+    "name": "GW2 map access alternatives",
+    "starter": "How do I access Sandswept Isles? Do I need to finish the whole episode first?",
+    "goal": "Separate required episode access from alternative story, portal or friend-teleport entry routes. Do not make every route a cumulative requirement.",
+    "followups": [
+      "Ask what I need unlocked before using a portal scroll.",
+      "Ask whether a friend teleport bypasses required episode access.",
+      "Ask whether the rare gear listed under map completion is a reward or an objective."
+    ]
+  },
+  {
+    "name": "GW2 map completion versus rewards",
+    "starter": "What counts toward map completion in Sandswept Isles? Is collecting rare gear one of the objectives?",
+    "goal": "Keep labeled objective counts, location rows, access conditions and rewards separate. Admit unlabeled counts are unknown.",
+    "followups": [
+      "Ask which objective types are confirmed for this map.",
+      "Ask whether collecting a reward item completes a map objective.",
+      "Ask for the first useful exploration step without inventing coordinates."
+    ]
+  },
+  {
+    "name": "GW2 hatchling completion count",
+    "starter": "How do I complete Lion's Arch Exterminator? Give the exact completion requirement and where to start.",
+    "goal": "Preserve the own achievement counter and walkthrough. Do not reduce a numerical collection goal to merely damaging one creature.",
+    "followups": [
+      "Ask whether damaging one hatchling is enough.",
+      "Ask how to get the tool back if I lose it.",
+      "Ask how to track the remaining count without assuming my account progress."
+    ]
+  },
+  {
+    "name": "GW2 event level and solo difficulty",
+    "starter": "I am level 15. Can I participate in Defend the skritt while they steal golem parts, and where would I start?",
+    "goal": "Distinguish the displayed event level from an evidenced hard entry requirement. Do not invent availability or unsupported start triggers.",
+    "followups": [
+      "Ask whether the displayed level itself prevents participation.",
+      "Ask what the actual objective is and how to check whether the event is active.",
+      "Ask what difficulty warning is useful without claiming a guaranteed solo outcome."
+    ]
+  },
+  {
+    "name": "GW2 group event participation",
+    "starter": "How do I start Defeat the champion fleshreaver? Does Group event mean solo participation is forbidden?",
+    "goal": "Research the trigger and location. Separate recommended difficulty from an actual participant-count lock. Do not invent reward quantities.",
+    "followups": [
+      "Ask where the trigger is relative to the named heart.",
+      "Ask whether the spawn timing is exact or approximate.",
+      "Ask what to do if the event is not active when I arrive."
+    ]
+  },
+  {
+    "name": "GW2 seasonal objective boundaries",
+    "starter": "How do I complete Lunar Homecoming: Metrica Province, and when is it available?",
+    "goal": "Retain the own achievement objective and seasonal availability notice. Do not combine sibling daily achievement names into required steps.",
+    "followups": [
+      "Ask whether other listed daily achievements are requirements for this one.",
+      "Ask whether current seasonal availability was actually verified.",
+      "Ask what the completion counter measures."
+    ]
+  },
+  {
+    "name": "GW2 wardrobe collection and disposal",
+    "starter": "What does Exotic Attire require? Can I buy the items rather than craft them myself?",
+    "goal": "Retrieve the own collection list and unlock requirements. Do not invent ownership, prices or a requirement to craft when buying can be relevant.",
+    "followups": [
+      "Ask for the required skins rather than just the achievement name.",
+      "Ask how to confirm a wardrobe unlock before salvaging anything.",
+      "Ask which facts still depend on my account or current market prices."
+    ]
+  },
+  {
+    "name": "GW2 gear stat changing caution",
+    "starter": "Can I change the stats on ascended armor instead of replacing every piece?",
+    "goal": "Research supported stat-changing methods, required components and destructive consequences. Ask which item is involved before treating special precursor equipment as ordinary armor.",
+    "followups": [
+      "Ask whether upgrades or legendary-precursor progress could be lost.",
+      "Ask what exact item details are needed before choosing a method.",
+      "Ask for a verified checklist without assuming I already own the materials."
+    ]
+  },
+  {
+    "name": "GW2 limited currency gearing choice",
+    "starter": "I have limited currency. Can the Wizard's Vault help me get ascended gear, or should I craft?",
+    "goal": "Research current relevant acquisition options and restrictions. Do not invent live costs, reward-stock availability, expansion ownership or the best build.",
+    "followups": [
+      "Ask what currency and equipment slot I need to specify first.",
+      "Ask which costs are verified and which need a current check.",
+      "Ask for one affordable next step based only on stated resources."
+    ]
+  },
+  {
+    "name": "GW2 power versus condition stats",
+    "starter": "I play mesmer and want better gear. Should I choose power or condition stats?",
+    "goal": "Ask about specialization, weapons and intended content before recommending a stat set. Research any specific build recommendation and separate exotic versus ascended from stat suitability.",
+    "followups": [
+      "Ask whether higher rarity alone fixes an unsuitable stat combination.",
+      "Ask whether the recommendation changes for open world versus a group build.",
+      "Ask for a starter direction without assuming which expansions I own."
+    ]
+  },
+  {
+    "name": "GW2 valuable item uses before selling",
+    "starter": "My bags are full. What is Glob of Ectoplasm used for, and should I sell or keep it?",
+    "goal": "Research documented uses and ask about player goals. Never infer inventory quantity, current trading-post prices or tell the player to discard valuable materials without context.",
+    "followups": [
+      "Ask whether it is used for the gearing goal discussed.",
+      "Ask how to decide without a live price.",
+      "Ask whether this answer proves I own any amount of the item."
+    ]
+  },
+  {
+    "name": "GW2 no account honest progress",
+    "starter": "I have not connected an account. Can you help me plan an achievement without knowing what I completed?",
+    "goal": "Give useful wiki-based planning while clearly separating unknown account completion. Never request a token in chat or invent missing progress.",
+    "followups": [
+      "Name Dug In as a possible goal and ask for its actual first step.",
+      "Ask whether a remembered goal proves completion.",
+      "Ask for the next action if a wiki lookup fails, without inventing a walkthrough."
+    ]
+  }
 ]

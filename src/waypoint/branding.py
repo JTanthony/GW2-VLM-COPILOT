@@ -4,7 +4,7 @@ APP_NAME = "GW2 VLM COPILOT"
 WELCOME = """Welcome to GW2 VLM COPILOT — See the Game. Know the Game. Play Your Way.
 
 To Begin:
-Start the engine, click Select window, and confirm continuous local vision. Keep the selected game restored to capture at up to 2 FPS. (Beta)
+Start the engine, click Select window, and confirm continuous local vision. Keep the selected game restored to capture once every 5 seconds. (Beta)
 
 Ask a question or start a conversation. I’m your copilot—here to find answers, help plan your next move, and keep you in the game.
 

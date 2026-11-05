@@ -5,6 +5,20 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from waypoint.capture.feed import Feed
 
 class FeedTests(unittest.TestCase):
+    def test_default_capture_samples_every_five_seconds(self):
+        feed=Feed(None,None,threading.Lock(),threading.Event())
+        self.assertEqual(feed.interval,5)
+
+    def test_capture_accepts_between_samples_but_rejects_stale_frames(self):
+        from waypoint.capture.graphics import WindowCapture
+        capture=WindowCapture.__new__(WindowCapture)
+        capture.target=None;capture.interval=5;capture.lock=threading.Lock()
+        capture.closed=False;capture.error=None;capture.frame=(96,b'png')
+        with patch('waypoint.capture.graphics.validate_target'),patch('waypoint.capture.graphics.time.monotonic',return_value=100):
+            self.assertEqual(capture.snapshot(),(96,b'png'))
+            capture.frame=(92,b'old')
+            with self.assertRaisesRegex(RuntimeError,'new game frames'):capture.snapshot()
+
     def test_latest_frame_bounded_and_capture_stops(self):
         feed=Feed(None,MagicMock(),threading.Lock(),threading.Event(),fps=20)
         with patch('waypoint.capture.feed.WindowCapture') as backend:

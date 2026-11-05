@@ -43,10 +43,10 @@ def research(client,question,history,observation=None,window_title='',progress=N
         # A verified, explicitly named GW2 adventure does not need model planning.
         direct_equipment=(ascended_topic(question) if 'Guild Wars 2' in sources and
                           (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(gw2|guild wars 2)\b',question)) else None)
-        direct_flying=('Guild Wars 2' in sources and gw2_topic(question)=='Flying Circus'
+        direct_topic=('Guild Wars 2' in sources and gw2_topic(question)
                        and (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(gw2|guild wars 2|verdant brink)\b',question)))
         plan=({'game':'Guild Wars 2','query':direct_equipment} if direct_equipment else
-              {'game':'Guild Wars 2','query':'Flying Circus'} if direct_flying else
+              {'game':'Guild Wars 2','query':gw2_topic(question)} if direct_topic else
               {'game':'Blish HUD','query':'API integration'} if 'Blish HUD' in sources and re.search(r'(?i)\b(blish\s*hud|bishhud)\b',question)
               else json.loads(client.complete(prompt,schema=schema,max_tokens=128)))
         game=plan.get('game'); query=plan.get('query')
@@ -74,6 +74,8 @@ def research(client,question,history,observation=None,window_title='',progress=N
             game=plan.get('game'); query=plan.get('query')
             if game=='none': return [],'\n\nI could not identify an approved source for this request. Please name the game and topic to look up.'
         if game=='none': return [],''
+        if game=='Guild Wars 2' and isinstance(query,str) and query.strip().casefold()=='inner nayos' and re.search(r'(?i)\bmastery track\b',question):
+            query+=' mastery track'
         if game not in sources or not isinstance(query,str) or not 1<=len(query.strip())<=160:
             raise ValueError('Invalid lookup plan.')
         stage='search term validation'
@@ -91,7 +93,7 @@ def research(client,question,history,observation=None,window_title='',progress=N
         if articles:
             articles=[dict(article,requested_subject=query.strip()) for article in articles]
             mastery=any(re.search(r'\bTrack:|\bMastery:.*\bXP required:',article.get('focus_text','')) for article in articles)
-            xp_question=re.search(r'(?i)\b(?:earn|gain|farm|grind|get)\b.{0,65}\b(?:xp|experience)\b|\b(?:xp|experience)\b.{0,65}\b(?:earn|gain|farm|grind|sources?|activities)\b',question)
+            xp_question=re.search(r'(?i)\b(?:earn|gain|farm|grind|get)\b.{0,65}\b(?:xp|experience)\b|\b(?:xp|experience)\b.{0,65}\b(?:earn|gain|farm|grind|sources?|activities)\b|\b(?:progress|train|training|start|unlock|first step|next step)\b',question)
             if game=='Guild Wars 2' and mastery and xp_question and not any(a.get('title')=='Mastery' for a in articles):
                 # Supplement a named ability with generic training mechanics,
                 # not an invented claim that its benefit is an XP source.

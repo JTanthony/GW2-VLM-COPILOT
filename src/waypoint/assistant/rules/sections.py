@@ -8,7 +8,7 @@ def body_text(text):
 
 def section(text,heading):
     """Read one known section without importing the next section's meaning."""
-    headings=r'Getting there|Access|Map completion|Locations|Objectives|Rewards|NPCs|Notes|Trivia|Walkthrough|Collection items|Related achievements|Achievements|Dialogue|Mechanics|See also|Gallery|References'
+    headings=r'Getting there|Access|Map completion|Locations|Objectives|Rewards|NPCs|Notes|Trivia|Walkthrough|Collection items|Related achievements|Achievements|Dialogue|Mechanics|See also|Gallery|References|Acquisition|Crafting|Looting|Vendors|Used in|Available prefixes|Recipe list|Types'
     match=re.search(r'(?im)^\s*'+re.escape(heading)+r'\s*$',text)
     if not match:return ''
     rest=text[match.end():]
@@ -21,20 +21,62 @@ def map_context(text):
     intro=re.split(r'(?im)^\s*(?:Getting there|Map completion|Locations|Rewards|Notes)\s*$',body,1)[0]
     intro='\n'.join(line for line in intro.splitlines() if '|' not in line)
     intro=' '.join(intro.split())[:650]
-    access=' '.join(section(body,'Getting there').split())[:650]
+    access_lines=[line.strip() for line in section(body,'Getting there').splitlines() if line.strip() and '|' not in line]
+    content=[line for line in access_lines if re.search(r'\b(?:required|requires?|unlocked|access to)\b',line,re.I) and not re.search(r'^(?:Using|Complete|By)\b',line,re.I)]
+    routes=[line for line in access_lines if line not in content]
     # Only explicitly labeled counters can establish objective counts. Never
     # reinterpret reward gear, area levels or a bare run of numbers as objectives.
     counts=re.findall(r'\b(\d+)\s*\[(waypoints?|renown hearts?|points? of interest|vistas?|hero challenges?)\]',intro,re.I)
     facts=['Map description (takes precedence over assumptions from Type=Zone): '+intro]
     if counts:facts.append('Map objective counts: '+'; '.join(f'{label}: {number}' for number,label in counts))
     else:facts.append('Map objective counts were not retrieved with reliable labels; do not invent them.')
-    if access:
-        facts.append('Access instructions: '+access)
-        facts.append('Separate required content access from entry routes. Owning/unlocking an episode is not completing the whole episode. Listed portal, friend-teleport and story-entry routes are alternatives, not cumulative tasks.')
+    if content:facts.append('Required content access (NOT whole-episode completion): '+' '.join(content)[:300])
+    if routes:
+        facts.append('Choose ONE supported entry route, not all routes: '+'; '.join(routes)[:550])
+    if access_lines:facts.append('Owning/unlocking required content is not finishing the entire episode. Do not require a story route AND a portal item. Missing objective counts do not mean a zone has no map objectives.')
     reward=re.search(r'(?im)^\s*(\d+ piece of gear[^\n]*drop tables[^\n]*)',section(body,'Map completion'))
     if reward:facts.append('Map completion reward, NOT a requirement: '+reward.group(1).strip()[:200])
     facts.append('Map completion rewards are earned AFTER completion, never items required to complete the map. Adjacent maps are not sub-areas.')
+    facts.append('Mail senders and congratulatory mail subjects are not achievement names or a completion checklist.')
     return '\n'.join(facts)
+
+
+def equipment_context(title,text,question=''):
+    """Keep acquisition routes and crafting-rating tables out of each other's scope."""
+    body=body_text(text)
+    if title in ('Ascended armor','Ascended equipment') and re.search(r'\b(?:stats?|prefix|infusions?|salvag\w*|upgrade slots?)\b',question,re.I):return None
+    if title=='Ascended equipment':
+        binding=re.search(r'(?i)(?:All\s+)?ascended equipment is account[ -]bound[^.\n]*',body)
+        if binding:return binding.group(0)+'.\nAccount-bound finished equipment cannot be bought on the Trading Post. Buying tradable crafting materials/components is a different route; do not describe it as buying finished ascended gear.'
+    if title=='Ascended armor':
+        crafting=section(body,'Crafting')
+        crafting=re.sub(r'(?im)^Primary article:[^\n]*\n?','',crafting)
+        paragraphs=[p.strip() for p in re.split(r'\n\s*\n',crafting) if p.strip()]
+        routes=[]
+        for p in paragraphs:
+            label='Collection-specific recipe route' if 'Envoy' in p else 'Crafted mark exchange route' if 'Grandmaster Marks' in p else 'Standard armor crafting route'
+            direction='INPUT: crafted Grandmaster Marks; OUTPUT: ascended armor. ' if label=='Crafted mark exchange route' else ''
+            routes.append(label+': '+direction+' '.join(p.split())[:850])
+        if not routes:return None
+        return 'No best route has been established for this player. A profession alone does not justify prioritizing a raid/Envoy route; ask about build, slots, content access and budget.\n'+'\n'.join(routes[:3])+('\nThese are alternative acquisition routes. Envoy collection conditions are not prerequisites for all ascended armor. Daily material crafting limits are not one full armor set per day. Trading Post materials/components are not finished ascended armor. Do not invent player groups as gear vendors.')
+    if title=="Crafter's backpack":
+        rows=[]
+        for line in body.splitlines():
+            cells=[c.strip() for c in line.split('|') if c.strip()]
+            if len(cells)==3 and cells[0].isdigit() and cells[1].isdigit():
+                rows.append(f'Crafting rating={cells[0]}; required character equip level={cells[1]}; item rarity={cells[2]}')
+        professions=sorted(set(re.findall(r'\[(?:discipline: )?(Armorsmith|Artificer|Chef|Huntsman|Jeweler|Leatherworker|Scribe|Tailor|Weaponsmith)\]',body)))
+        if not professions:
+            professions=sorted(set(re.findall(r'\|\s*(Armorsmith|Artificer|Chef|Huntsman|Jeweler|Leatherworker|Scribe|Tailor|Weaponsmith)\s*\|',body)))
+        if not rows:return None
+        return 'Crafted back-slot equipment, NOT inventory bags.\n'+'\n'.join(rows)+('\nRetrieved recipe disciplines: '+', '.join(professions) if professions else '')+'\nCrafting rating and equip level are distinct. Equippable by a level-80 character does not mean this is a level-80 item. Do not invent a higher tier or omit retrieved disciplines.'
+    if title=='Bag':
+        crafting=section(body,'Crafting')
+        if not crafting and len(body)<400:crafting=body
+        professions=sorted(set(re.findall(r'\[(?:discipline: )?(Armorsmith|Artificer|Chef|Huntsman|Jeweler|Leatherworker|Scribe|Tailor|Weaponsmith)\]',crafting)))
+        if not professions:professions=sorted(set(re.findall(r'\b(?:Armorsmith|Leatherworker|Tailor)\b',crafting)))
+        return 'Inventory bags, NOT back-slot equipment.\n'+('Verified crafting disciplines in the retrieved section: '+', '.join(professions) if professions else 'Crafting discipline names were not retrieved; do not invent a discipline from a bag name.')+'\nCraftsman is a bag type, not a crafting discipline or mastery region. Bag capacity, recipe rating and ingredient quantities are different fields.\nCrafting-section evidence: '+' '.join(crafting.split())[:900]
+    return None
 
 
 def event_context(question,text,title):

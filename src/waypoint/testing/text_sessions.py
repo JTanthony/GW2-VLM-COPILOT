@@ -4,7 +4,7 @@ from datetime import datetime,timezone
 from pathlib import Path
 from types import SimpleNamespace
 from waypoint.storage.resources import sensitive
-from waypoint.assistant.web_lookup import MAINTENANCE_NOTICE
+from waypoint.assistant.web_lookup import MAINTENANCE_NOTICE,check_wiki_available
 
 def lookup_failed(answer):
     return 'Online lookup failed during ' in answer or MAINTENANCE_NOTICE in answer
@@ -151,11 +151,38 @@ def findings(question,answer,accounts,seconds):
             issues.append('Possible completion contradiction for '+name+'; human review required')
     return issues
 
-def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=8,delay=1,plans=None):
+def wait_for_source(seconds,stop,deadline):
+    """Bounded cooldown; Stop and the overall time limit remain responsive."""
+    until=min(time.monotonic()+seconds,deadline)
+    while time.monotonic()<until:
+        if stop.exists():return False
+        time.sleep(min(.25,max(0,until-time.monotonic())))
+    return not stop.exists() and time.monotonic()<deadline
+
+
+class SourceRecoveryBudget:
+    """Two probes per failure episode; useful evidence can rearm later episodes."""
+    def __init__(self,delays=(30,60)):
+        self.delays=delays;self.used=0;self.successes=0;self.last_failure=None;self.rearms=0
+    def record(self,failed,has_evidence,now):
+        if failed:
+            self.last_failure=now;self.successes=0
+        elif has_evidence and self.last_failure is not None:
+            self.successes+=1
+            if self.used and self.successes>=5 and now-self.last_failure>=300:
+                self.used=0;self.successes=0;self.rearms+=1
+                return True
+        return False
+
+
+def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=8,delay=1,plans=None,*,source_check=None,source_recovery_delays=(30,60)):
     out=Path(out); out.mkdir(parents=True,exist_ok=True)
     started=time.monotonic(); deadline=started+hours*3600
     summary={'started_at':datetime.now(timezone.utc).isoformat(),'mode':'text-only','cases':0,'flagged_turns':0,'errors':0,'scenarios':[]}
     stop=out.parent/'STOP'; plans=plans or scenarios(accounts); consecutive_lookup_failures=0; source_unavailable=False
+    source_check=source_check or check_wiki_available
+    recoveries=[]
+    recovery=SourceRecoveryBudget(source_recovery_delays)
     with (out/'conversations.jsonl').open('w',encoding='utf-8') as log:
         try:
             for session in range(sessions):
@@ -186,6 +213,11 @@ def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=
                         dialogue.append({'question':question,'answer':answer[:400]})
                         summary['cases']+=1; summary['flagged_turns']+=bool(issues)
                         failed=lookup_failed(answer)
+                        has_evidence=getattr(assistant,'last_research_has_evidence',False) is True and not failed
+                        entry['reference_evidence_available']=has_evidence
+                        if recovery.record(source_failed(answer),has_evidence,time.monotonic()):
+                            summary['source_recovery_rearms']=recovery.rearms
+                            print('Wiki evidence has been available for a sustained period. Recovery allowance restored for a later outage.',flush=True)
                         summary['lookup_failures']=summary.get('lookup_failures',0)+int(failed)
                         consecutive_lookup_failures=consecutive_lookup_failures+1 if source_failed(answer) else 0
                         summary['consecutive_lookup_failures']=consecutive_lookup_failures
@@ -197,14 +229,40 @@ def run_sessions(player,make_assistant,accounts,out,sessions=1000,turns=6,hours=
                         entry['request_budget']={key:stats[key] for key in ('input_tokens','answer_tokens','compaction_level','context_limit','budget_ok') if isinstance(stats.get(key),(int,bool))}
                     log.write(json.dumps(entry,ensure_ascii=False)+'\n'); log.flush()
                     print(json.dumps({k:v for k,v in entry.items() if k not in ('question','answer')}),flush=True)
-                    if 'error' in entry or source_unavailable: break
+                    if source_unavailable:
+                        # Do not repeat a failed question or keep generating
+                        # model replies during an outage. Probe the public API
+                        # at most twice per failure episode, then skip scenes.
+                        while recovery.used<len(recovery.delays):
+                            seconds=recovery.delays[recovery.used]
+                            print(f'Wiki lookups failed three times. Waiting {seconds} seconds before a bounded availability check. Stop remains available.',flush=True)
+                            if not wait_for_source(seconds,stop,deadline):
+                                source_unavailable=False;break
+                            recovery.used+=1
+                            attempt={'attempt':len(recoveries)+1,'episode_attempt':recovery.used,'episode':recovery.rearms+1,'cooldown_seconds':seconds,'checked_at':datetime.now(timezone.utc).isoformat()}
+                            try:
+                                if source_check() is not True:raise ValueError('Availability was not confirmed.')
+                                attempt['status']='available'
+                            except Exception as error:
+                                attempt.update(status='unavailable',error_type=type(error).__name__)
+                            recoveries.append(attempt)
+                            summary['source_recovery_checks']=list(recoveries)
+                            (out/'source-recovery.json').write_text(json.dumps(recoveries,indent=2),encoding='utf-8')
+                            if attempt['status']=='available':
+                                consecutive_lookup_failures=0;summary['consecutive_lookup_failures']=0
+                                source_unavailable=False
+                                print('Wiki availability check passed. Moving to the next scenario; the failed question is not retried.',flush=True)
+                                break
+                        break
+                    if 'error' in entry: break
                     if delay: time.sleep(min(delay,max(0,deadline-time.monotonic())))
                 summary['scenarios'].append(plan['name'])
                 if summary['errors']>=3 or source_unavailable: break
         finally:
             summary['finished_at']=datetime.now(timezone.utc).isoformat()
             summary['stop_reason']='stop file' if stop.exists() else 'time limit' if time.monotonic()>=deadline else 'source unavailable' if source_unavailable else 'repeated errors' if summary['errors']>=3 else 'session limit'
-            if source_unavailable:summary['stop_detail']='Three consecutive wiki-retrieval failures. This threshold does not establish a site-wide outage.'
+            if source_unavailable:
+                summary['stop_detail']=('Three consecutive wiki-retrieval failures. Recovery allowance for this failure episode was exhausted; no additional availability probe was made.' if recoveries and recoveries[-1]['status']=='available' else 'Three consecutive wiki-retrieval failures and both bounded availability probes failed.')+' This does not establish a site-wide outage.'
             (out/'summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
             text=f"# Text conversation debrief\n\nTurns: {summary['cases']}\n\nFlagged turns: {summary['flagged_turns']}\n\nErrors: {summary['errors']}\n\nStopped: {summary['stop_reason']}\n\n"
             text+='## Player value review\n\nReview whether each conversation gives a usable next action, explains prerequisites and ordered steps, fits time/solo/cost preferences, and separates verified progress from unknowns. A helpful answer brings researched details into chat; links alone or asking the player to assemble a guide do not meet the goal. Clarifying an unknown game or achievement is appropriate. Do not reward confident invented facts.\n\n'

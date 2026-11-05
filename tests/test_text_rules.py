@@ -160,8 +160,10 @@ class SharedTextRulesTests(unittest.TestCase):
                 assistant=MagicMock();assistant.chat.return_value=notice
                 accounts=SimpleNamespace(snapshot=None,names={},selected_game='Guild Wars 2')
                 result=run_sessions(player,lambda n:assistant,accounts,Path(folder)/'run',sessions=10,turns=5,delay=0,
-                    plans=[{'name':'test','game':'Guild Wars 2','starter':'Help with gliding'}])
+                    plans=[{'name':'test','game':'Guild Wars 2','starter':'Help with gliding'}],
+                    source_check=MagicMock(side_effect=TimeoutError()),source_recovery_delays=(0,0))
                 self.assertEqual(result['cases'],3);self.assertEqual(result['stop_reason'],'source unavailable')
+                self.assertEqual(len(result['source_recovery_checks']),2)
 
     def test_planner_failure_is_not_mislabeled_as_a_wiki_outage(self):
         from waypoint.testing.text_sessions import source_failed,lookup_failed

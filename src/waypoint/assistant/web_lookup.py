@@ -59,6 +59,7 @@ def gw2_topic(query):
             and not re.search(r'\b\d+\s*[- ]?slots?\b',query,re.I)):
         return 'Bag'
     if query.casefold().strip()=='torn from the sky': return 'Torn from the Sky'
+    if re.search(r"dragon['’]?s stand\s*\(\s*heart of thorns\s*\)",query,re.I):return "Dragon's Stand (Heart of Thorns)"
     for pattern,title in ((r'wyvern\s+matri?a(?:r)?ch','Legendary Wyvern Matriarch'),
                           (r'fallen\s+masks','Fallen Masks'),
                           (r'\bflying\s+circus\b','Flying Circus'),
@@ -68,7 +69,8 @@ def gw2_topic(query):
 
 def named_subject(question):
     """Extract an explicitly supplied task name, not a guessed location."""
-    patterns=(r'(?i)(?:whether it is still available|what it does|its encounter instead|active now|how to progress it):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
+    patterns=(r'(?i)\bmedal (?:in|for)\s+(.+?)(?=\s+(?:offers?|gives?|provides?|affects?|impacts?|yields?)\b|[?.]|$)',
+              r'(?i)(?:whether it is still available|what it does|its encounter instead|active now|how to progress it):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
               r'(?i)\b(?:achievement|mastery|event)\s+(?:called|named)\s+["“]?([^"”?.]+)')
     for pattern in patterns:
         match=re.search(pattern,question)
@@ -149,6 +151,12 @@ class WikiText(HTMLParser):
             return
         if tag in ('script','style','nav'): self.blocked+=1
         if self.blocked or self.skipped_divs: return
+        if tag=='a':
+            title=dict(attrs).get('title','').strip()
+            objective=re.fullmatch(r'(?i)(Waypoint|Renown Heart|Point of Interest|Vista|Hero challenge)(?: \((?:map icon|unlocked|completed)\))?',title)
+            if objective:self.handle_data('['+objective.group(1).lower()+']')
+            if title in ('Armorsmith','Artificer','Chef','Huntsman','Jeweler','Leatherworker','Scribe','Tailor','Weaponsmith'):
+                self.handle_data('[discipline: '+title+']')
         if tag in ('dt','dd'): self.definition=[]
         if tag=='table': self.columns=[]
         if tag in ('p','li'): self.note=[]
@@ -270,6 +278,8 @@ def lookup(game,query):
     mapped=next((page for name,page in regional.items() if name.casefold()==subject.casefold()),None)
     if game=='Guild Wars 2' and mapped:
         topic=mapped
+    if game=='Guild Wars 2' and subject.casefold()=='inner nayos' and re.search(r'\bmastery',query,re.I):
+        topic='Secrets of the Obscure mastery tracks'
     if topic:
         # The rarity overview links types but lacks acquisition instructions.
         titles=[topic,'Ascended armor'] if topic=='Ascended equipment' else [topic]
@@ -293,6 +303,12 @@ def lookup(game,query):
             parser=WikiText(); parser.feed(html)
             body=''.join(parser.parts).strip(); headings='\n'.join(parser.headers)
             if not body: continue
+            # Crafting professions often exist only in linked icon titles.
+            # Keep the relevant section ahead of unrelated bag/property tables.
+            from waypoint.assistant.rules.sections import section as reference_section
+            if title=='Bag':
+                crafting=reference_section(body,'Crafting')
+                if crafting:body='Inventory bag crafting reference\nCrafting\n'+crafting[:4500]+'\nNotes\nOther article context:\n'+body[:1800]
             # Index table headings first so long categories retain their item names.
             extract=('Table column headings (not a list of mastery levels) / achievement names:\n'+headings[:4000]+'\nArticle details:\n'+body[:6000]) if headings else body[:10000]
             section_subject=re.sub(r'(?i) Mount$','',subject)

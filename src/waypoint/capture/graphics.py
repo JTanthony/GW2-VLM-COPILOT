@@ -5,7 +5,7 @@ from windows_capture import WindowsCapture
 from .windows import validate_target
 
 class WindowCapture:
-    def __init__(self,target,max_width=1280,fps=2):
+    def __init__(self,target,max_width=1280,fps=.2):
         self.target=target; self.max_width=max_width; self.interval=1/fps
         self.lock=threading.Lock(); self.frame=None; self.error=None
         self.closed=False; self.control=None; self.last_frame=0
@@ -44,7 +44,7 @@ class WindowCapture:
         with self.lock:
             if self.closed: raise RuntimeError('The selected window closed. Select it again.')
             if self.error: raise RuntimeError(self.error)
-            if not self.frame or time.monotonic()-self.frame[0]>3:
+            if not self.frame or time.monotonic()-self.frame[0]>max(3,self.interval+2):
                 raise RuntimeError('Waiting for new game frames. Restore the game if minimized.')
             return self.frame
     def stop(self):

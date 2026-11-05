@@ -4,7 +4,7 @@ from .graphics import WindowCapture
 from .progress import ProgressGate
 
 class Feed:
-    def __init__(self,target,assistant,inference_lock,question_pending,fps=2,max_width=1280,review_callback=None,frame_callback=None):
+    def __init__(self,target,assistant,inference_lock,question_pending,fps=.2,max_width=1280,review_callback=None,frame_callback=None):
         self.review_callback=review_callback
         self.frame_callback=frame_callback
         self.target=target; self.assistant=assistant; self.inference_lock=inference_lock
@@ -92,7 +92,7 @@ class Feed:
                 generation=current_generation; gate=ProgressGate(); seen=None; next_analysis=0
             if self.question_pending.is_set(): continue
             if time.monotonic()<next_analysis: continue
-            try: stamp,png=self.snapshot(max_age=2)
+            try: stamp,png=self.snapshot(max_age=max(2,self.interval+2))
             except RuntimeError: continue
             if stamp==seen: continue
             with self.inference_lock:
@@ -100,7 +100,7 @@ class Feed:
                 with self.lock:
                     if generation!=self.reader_generation: continue
                 # Refresh after waiting: never analyze a frame queued behind a chat request.
-                try: stamp,png=self.snapshot(max_age=2)
+                try: stamp,png=self.snapshot(max_age=max(2,self.interval+2))
                 except RuntimeError: continue
                 # The legacy VLM gate watches tracker/panel pixels; the OCR
                 # experiment also reads center/minimap, so sample every 5s.

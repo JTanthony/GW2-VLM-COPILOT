@@ -2,7 +2,7 @@
 
 Open run-GW2-VLM-COPILOT.cmd. Start engine, then Select window and confirm continuous capture of the exact game/application.
 
-The approved window is captured directly using Windows Graphics Capture at up to 2 FPS, even while other applications have focus or cover it. Minimize the selected window to pause capture; restore it to resume. The model analyzes the newest frame at its own speed; it does not process two images per second. Only the latest frame is retained, so slow inference cannot build a screenshot backlog.
+The approved window is captured directly using Windows Graphics Capture once every 5 seconds, even while other applications have focus or cover it. Minimize the selected window to pause capture; restore it to resume. The model analyzes the newest frame at its own speed; it does not process two images per second. Only the latest frame is retained, so slow inference cannot build a screenshot backlog.
 
 Keep the game restored, then type a question in GW2 VLM COPILOT and Send. Send freezes a frame no older than ten seconds and takes priority over the next background observation. An observation already running must finish first. If no recent frame exists, the chat tells you to restore the game and wait for new frames. Pause stops capture and clears approval. Stopping the engine or closing GW2 VLM COPILOT also stops the feed and waits for active work.
 
@@ -12,7 +12,7 @@ Screenshots and observations stay in memory. No game inputs, microphone access, 
 
 - src/waypoint/capture/windows.py: selected-window identity and minimized/visibility checks.
 - src/waypoint/capture/graphics.py: exact HWND Windows Graphics Capture session, bounded PNG encoding, freshness and shutdown.
-- src/waypoint/capture/feed.py: bounded 2 FPS capture loop and separate serial model analysis.
+- src/waypoint/capture/feed.py: bounded five-second capture loop and separate serial model analysis.
 - src/waypoint/ui/app.py: selection, permission, Pause, Send and visible errors.
 - src/waypoint/assistant/local.py: local observation and answer prompts.
 - local-data/gui-errors.log: Send failure tracebacks, without screenshot payloads.
@@ -55,7 +55,7 @@ Dependency pins are in `requirements.txt`. Install into the project environment 
 
 Standard Windows builds keep captured images in RAM and have no recording control. Packaging excludes the review module; packaged launches reject its development flag.
 
-Source runs can explicitly enable **Record vision (dev)** in the toolbar. Start the engine, select and approve the game window, then play and ask questions. Recording saves captured PNG frames at up to 2 FPS (subject to capture/disk speed) under `local-data/vision-review`, with a JSONL index beside each session's frame folder. It does not start capture or the engine automatically. The optional `run-gw2-vision-training.cmd` enables this same recording mode on source startup.
+Source runs can explicitly enable **Record vision (dev)** in the toolbar. Start the engine, select and approve the game window, then play and ask questions. Recording saves captured PNG frames once every 5 seconds (subject to capture/disk speed) under `local-data/vision-review`, with a JSONL index beside each session's frame folder. It does not start capture or the engine automatically. The optional `run-gw2-vision-training.cmd` enables this same recording mode on source startup.
 
 Frame records carry capture timestamps. Question records link the recent frame at submission; answer/observation records link the actual analyzed frame, including when an earlier observation is reused. A missing frame link is explicitly null rather than claiming visual evidence. Analysis timing and error types are retained. Raw model observations are not proof of screenshot accuracy; reviewers can inspect the linked frames.
 
@@ -80,3 +80,11 @@ stopping vision prevents delivery; a newly approved capture session can produce
 one new introduction. Map changes within a session do not trigger repeated
 messages. Combat coaching and other-map reminders remain disabled.
 
+
+
+Live capture defaults to 0.2 FPS (one frame every five seconds), including
+optional source recording. Capture and background analysis accept a frame up
+to seven seconds old to allow the five-second interval and a small scheduling
+margin. Window validation still blocks minimized, closed or replaced targets.
+This reduces capture frequency, not loaded model-weight memory; analysis still
+uses the existing change gate and completes at model speed.

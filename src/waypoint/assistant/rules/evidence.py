@@ -1,6 +1,6 @@
 """Select labeled public facts before inference, independent of either model."""
 import re
-from .sections import body_text,map_context,event_context,collection_names
+from .sections import body_text,map_context,event_context,collection_names,equipment_context
 
 def focus_articles(question,articles,history=()):
     result=[]
@@ -54,13 +54,15 @@ def focus_articles(question,articles,history=()):
             focus='Requested achievement: '+requested+' | Parent article: '+item['title']+'\n'
             item['title']=requested+' (entry in '+item['title']+')'
             if description and not re.fullmatch(r'[.\s…]+',description):
-                objective=re.split(r'\b(?:Story Instance|Prerequisite|Reward|Journal):',description,1,flags=re.I)[0].strip()
+                objective=re.split(r'\b(?:Story Instance|Prerequisite|Unlock Item|Reward|Journal):',description,1,flags=re.I)[0].strip()
+                unlock_item=re.search(r'Unlock Item:\s*(.*?)(?=\s+Reward:|\n|$)',description,re.I)
                 prerequisite=re.search(r'Prerequisite:\s*([^|\n]+?)(?=\s+Reward:|\s*\||\n|$)',section,re.I)
                 instance=re.search(r'Story Instance:\s*(.*?)(?=\s+(?:Prerequisite|Reward):|\s*\||\n|$)',section,re.I)
                 focus+='Own objective: '+objective[:400]+'\n'
+                if unlock_item:focus+='Required unlock item (NOT the target achievement): '+unlock_item.group(1).strip()[:120]+'\n'
                 objective_rows=[[c.strip() for c in line.strip().strip('|').split('|')] for line in section.splitlines() if line.strip().startswith('|')]
                 thresholds=[cells[1] for cells in objective_rows[:1] if len(cells)>1 and re.search(r'\d',cells[1])]
-                thresholds+=[cells[0] for cells in objective_rows[1:] if re.match(r'Unlocked\s+\d+\b',cells[0],re.I)]
+                thresholds+=[cells[0] for cells in objective_rows[1:] if re.match(r'(?:Unlocked\s+\d+\b|\d+\s+[^|]{0,70}\b(?:Collected|Completed|Exterminated|Unlocked)\b)',cells[0],re.I)]
                 if thresholds:focus+='Completion thresholds (not current player progress): '+'; '.join(thresholds)[:400]+'\n'
                 if standalone:
                     entries=collection_names(section)
@@ -101,6 +103,8 @@ def focus_articles(question,articles,history=()):
                 if skill:focus+='\nCrafting skill after THIS training tier: '+skill.group(2)+'. This is not the overall discipline maximum or the character level.'
             focus+='\nSubject type: mastery training level, not an achievement. Experience is required training XP, not an exclusive XP source. Use the matching mastery region; the benefit is not an action required before earning XP.'
             support=''
+        equipment=equipment_context(item.get('title',''),text,question)
+        if equipment and not requested:focus=equipment;support=''
         event=event_context(question,text,item.get('title','Event'))
         if event and not requested:
             focus=event;support=''

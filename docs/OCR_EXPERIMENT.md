@@ -34,7 +34,7 @@ remembered locally; every new app launch defaults to Gemma with OCR off.
 - Four overlapping regions cover the approved window. Chat and the skill bar
   are masked in the OCR copy using percentage coordinates in `reader.py`.
   Different UI layouts may need adjustments; these masks do not identify chat
-  automatically. Capture may sample up to 2 FPS; OCR runs a pass then waits
+  automatically. Capture samples once every five seconds; OCR runs a pass then waits
   five seconds, rather than processing every captured frame.
 - Tesseract uses CPU processing and memory pipes. Normal frames and crops stay
   in RAM. The separate, explicitly enabled **Record vision (dev)** control saves
@@ -63,8 +63,8 @@ Gemma and Qwen testers share the same 1B player port (17866).
 
 The tester requires the local inference configuration for server settings but
 does not load Gemma 12B. It refuses occupied app/test ports, checks wiki
-availability before loading models, and stops after three consecutive wiki
-retrieval failures. Default limits are eight hours, 1,000 sessions and five
+availability before loading models, and performs bounded recovery checks after
+three consecutive wiki retrieval failures. Default limits are eight hours, 1,000 sessions and five
 turns per session. Use `stop-qwen-gw2-wiki-for-training-no-account.cmd` to stop
 after active inference finishes. This tester never starts capture or loads
 account credentials. Reports stay private under `local-data/text-playtests-qwen/`.

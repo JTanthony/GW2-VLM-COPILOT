@@ -48,7 +48,7 @@ class App:
         self.qwen_ocr=tk.BooleanVar(value=False)
         self.gemma_selected=tk.BooleanVar(value=True)
         self.model_paths={'qwen':self.settings.get('qwen_model_path',''),'gemma':self.settings.get('gemma_model_path','')}
-        self.settings_dialog=None
+        self.settings_dialog=None;self.settings_built=False
         self.ocr_tips=tk.BooleanVar(value=True);self.nearby_gate=None
         if vision_review:
             from waypoint.storage.vision_review import VisionReview
@@ -106,13 +106,21 @@ class App:
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
         self.update_available=None; self.update_checking=False; self.update_status_timer=None
-        update_row=tk.Frame(self.body,bg=BG); update_row.grid(row=5,column=0,sticky='ew',padx=8,pady=(0,3))
+        update_parent=self.body
+        if not getattr(sys,'frozen',False):
+            self.settings_dialog=tk.Toplevel(self.root);self.settings_dialog.withdraw()
+            self.settings_dialog.protocol('WM_DELETE_WINDOW',self.settings_dialog.withdraw)
+            update_parent=self.settings_dialog
+        self.update_area=tk.Frame(update_parent,bg=BG)
+        self.update_area.columnconfigure(0,weight=1)
+        if getattr(sys,'frozen',False):self.update_area.grid(row=5,column=0,sticky='ew')
+        update_row=tk.Frame(self.update_area,bg=BG); update_row.grid(row=0,column=0,sticky='ew',padx=8,pady=(0,3))
         self.auto_updates=tk.BooleanVar(value=self.settings.get('check_updates_on_launch',True))
         tk.Checkbutton(update_row,text='Check updates on launch',variable=self.auto_updates,bg=BG,fg=MUTED,
                        selectcolor=PANEL,activebackground=BG,font=('Segoe UI',9)).pack(side='left')
         self.update_button=self.button(update_row,'Check updates',self.update_action); self.update_button.pack(side='right')
-        self.update_status=tk.Label(self.body,text='',bg=BG,fg=ACCENT,font=('Segoe UI',9),anchor='w',justify='left',wraplength=320)
-        self.update_status.grid(row=6,column=0,sticky='ew',padx=10); self.update_status.grid_remove()
+        self.update_status=tk.Label(self.update_area,text='',bg=BG,fg=ACCENT,font=('Segoe UI',9),anchor='w',justify='left',wraplength=400)
+        self.update_status.grid(row=1,column=0,sticky='ew',padx=10); self.update_status.grid_remove()
         if not getattr(sys,'frozen',False):
             ocr_row=tk.Frame(self.body,bg=BG); ocr_row.grid(row=7,column=0,sticky='ew',padx=8,pady=(0,3))
             self.ocr_enabled=tk.BooleanVar(value=False)
@@ -299,7 +307,7 @@ class App:
             indexes=choices.curselection()
             if not indexes: return
             target=windows[indexes[0]]
-            if not messagebox.askyesno('Approve capture',f'Allow continuous screenshots of {target.title} at up to 2 FPS?\n\nCapture continues while you use other apps. Minimize the game to pause; restore it to resume. The model analyzes the latest frame at its own speed. Pause stops capture and clears approval. Screenshots stay in memory.',parent=dialog): return
+            if not messagebox.askyesno('Approve capture',f'Allow continuous screenshots of {target.title} once every 5 seconds?\n\nCapture continues while you use other apps. Minimize the game to pause; restore it to resume. The model analyzes the latest frame at its own speed. Pause stops capture and clears approval. Screenshots stay in memory.',parent=dialog): return
             self.stop_feed(); self.selected_window=target; dialog.destroy(); self.start_feed()
             self.append('Waypoint',f'Selected {target.title}. Keep that window restored to continue vision, even while using other apps. Then type a question and Send. Pause stops vision and clears this selection.')
             self.status.configure(text='Capture approved \u00b7 '+target.title)
@@ -343,14 +351,14 @@ class App:
             self.qwen_ocr.set(self.engine.config.get('alias')=='waypoint-qwen-ocr' if self.engine else not self.qwen_ocr.get())
             self.status.configure(text='Stop the engine before changing the model profile.')
         self.gemma_selected.set(not self.qwen_ocr.get())
-        if self.settings_dialog and self.settings_dialog.winfo_exists(): self.refresh_model_settings()
+        if self.settings_built and self.settings_dialog.winfo_exists(): self.refresh_model_settings()
     def open_settings(self):
         if getattr(sys,'frozen',False): return
-        if self.settings_dialog and self.settings_dialog.winfo_exists():
-            self.settings_dialog.lift();return
-        dialog=tk.Toplevel(self.root);self.settings_dialog=dialog
+        if self.settings_built:
+            self.settings_dialog.deiconify();self.settings_dialog.lift();return
+        dialog=self.settings_dialog
         dialog.title(APP_NAME+' - Settings');dialog.configure(bg=BG)
-        dialog.geometry('460x340');dialog.minsize(400,340);dialog.attributes('-topmost',True)
+        dialog.geometry('460x490');dialog.minsize(400,490);dialog.attributes('-topmost',True)
         dialog.iconphoto(False,self.brand_icon);dialog.transient(self.root)
         tk.Label(dialog,text='Model settings',bg=BG,fg=TEXT,font=('Segoe UI Semibold',12)).pack(anchor='w',padx=16,pady=(16,8))
         self.load_model_button=self.button(dialog,'Load model...',self.pick_model)
@@ -362,6 +370,8 @@ class App:
             control=tk.Checkbutton(dialog,text=label,variable=var,command=lambda k=key:self.choose_model(k),
                 bg=BG,fg=TEXT,selectcolor=PANEL,activebackground=BG,activeforeground=TEXT)
             control.pack(anchor='w',padx=12);self.model_choices.append(control)
+            recommendation='Recommended for GPUs with 8GB or less.' if key=='qwen' else 'Recommended for GPUs with 12GB or more.'
+            tk.Label(dialog,text=recommendation,bg=BG,fg=MUTED,font=('Segoe UI',9),anchor='w').pack(anchor='w',padx=34,pady=(0,5))
         row=tk.Frame(dialog,bg=PANEL);row.pack(fill='x',padx=16,pady=(12,4))
         self.ocr_download_button=self.button(row,'Download Tesseract OCR',lambda:webbrowser.open('https://github.com/UB-Mannheim/tesseract/wiki'))
         self.ocr_download_button.pack(side='left',padx=4,pady=4)
@@ -370,7 +380,9 @@ class App:
         self.ocr_path_label=tk.Label(dialog,bg=BG,fg=MUTED,wraplength=420,justify='left',anchor='w')
         self.ocr_path_label.pack(fill='x',padx=16)
         tk.Label(dialog,text='Stop the engine before changing models. Start engine loads your selection.',bg=BG,fg=MUTED,wraplength=420,justify='left').pack(anchor='w',padx=16,pady=12)
-        self.refresh_model_settings()
+        self.update_area.pack(side='bottom',fill='x',padx=8,pady=12)
+        self.settings_built=True
+        self.refresh_model_settings();dialog.deiconify()
     def choose_model(self,key):
         # Checkboxes present a single engine choice, never two simultaneous models.
         self.qwen_ocr.set(key=='qwen');self.select_qwen_ocr()
@@ -563,7 +575,7 @@ class App:
                         from waypoint.experiments.ocr_landmarks.qwen import reasoning_observation
                         ocr=feed.ocr_context(max_age=15) if feed and not is_greeting(question) else None
                         if feed and self.ocr_reader and needs_screen(question) and (not ocr or force_new_analysis(question)):
-                            stamp,png=feed.snapshot(max_age=2)
+                            stamp,png=feed.snapshot(max_age=7)
                             self.events.put(('progress','Reading screen text with local OCR...'))
                             ocr=(stamp,self.ocr_reader.observe(png))
                         if ocr:
@@ -608,7 +620,7 @@ class App:
         if self.ocr_reader: return  # Raw OCR has not passed recognition validation.
         intro=getattr(self,'achievement_intro',None)
         if not intro or intro.sent or self.busy or self.closing or not self.feed: return
-        try: self.feed.snapshot(max_age=2)
+        try: self.feed.snapshot(max_age=7)
         except RuntimeError:
             intro.reason='Waiting for recent game frames'; return
         observation,age,stamp=self.feed.observation_context(max_age=90,include_stamp=True)
@@ -688,7 +700,7 @@ class App:
     def poll(self):
         self.update_account_indicator()
         self.refresh_ocr_readings()
-        if getattr(self,'settings_dialog',None) and self.settings_dialog.winfo_exists():self.refresh_model_settings()
+        if getattr(self,'settings_built',False) and self.settings_dialog.winfo_exists():self.refresh_model_settings()
         try:
             while True:
                 kind,value=self.events.get_nowait()

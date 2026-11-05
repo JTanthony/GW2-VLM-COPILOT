@@ -86,3 +86,56 @@ Unspecified first-turn zone/achievement requests in the observed regression case
 Map catalog questions now ask the copilot to verify zone versus encounter status before giving a guide. API type Public is not sufficient to prove ordinary map completion. Answer guidance requires all applicable objective types and warns against substituting a lantern achievement or vistas-only extract for full map completion. Classification remains dependent on research; this does not establish a verified map allowlist.
 
 Validation: 126 automated tests passed. No live model accuracy improvement has been measured yet. A separate review-log filename collision found during these checks was fixed with unique session identifiers. Restart development processes to load the changes; the published Windows package is unchanged until rebuilt.
+
+
+## Practical GW2 player question pool
+
+The shared focused pool in `src/waypoint/testing/gw2_wiki_scenarios.json` now
+contains 28 scenarios, including 20 practical additions. New and existing
+scenarios are interleaved so short runs exercise both player needs and previous
+regressions. The existing public catalog sampling remains enabled separately.
+
+Coverage includes ascended gearing with natural typos; build/stat clarification;
+bags versus back-slot equipment; item uses and disposal; stat-changing cautions;
+map access versus story entry; map objectives versus rewards; collection lists
+and counters; event rewards, levels and group difficulty; seasonal objectives;
+mastery order, costs and XP sources; and planning without an account connection.
+
+Each scenario supplies a player question, review goal and follow-up intents,
+not a reference answer. The answer model must research the actual mechanics;
+never treat the question's assumptions as verified facts. The 1B player keeps
+its original goal and asks for usable next actions. Neither model trains its
+weights. The same pool serves Gemma and Qwen testers; no-account mode continues
+to skip the connected-progress scenario. Restart the tester to load the pool;
+no test process is started automatically by this change.
+
+
+## Temporary wiki failures
+
+After three consecutive wiki retrieval failures, the runner pauses model
+question/answer generation and waits 30 seconds before checking the official
+wiki API site information. A successful check skips the remainder of the failed
+scenario and continues with the next scenario. Failed questions are not retried.
+
+At most two availability checks are allowed per failure episode. The second uses
+a 60-second cooldown, either after a failed first check or a later failure burst.
+After at least five answers with retrieved or cached public references and five
+minutes without a retrieval failure, the allowance resets for a later episode.
+Greetings, no-match replies and account-only replies do not count toward this
+reset. If both checks fail or failures persist before a successful period, the
+run stops with `source unavailable`. A successful site-info check does not
+prove that every individual article can be retrieved. Answers still require
+verified reference evidence; no fabricated fallback guide is enabled.
+
+Stop requests and the overall time limit remain active during cooldowns.
+`source-recovery.json` records check times, results and error types in the private
+report directory; `summary.json` includes the same check records. The Qwen
+startup availability preflight remains in place. This behavior is shared by the
+Gemma and Qwen text testers and requires restarting the tester to load it.
+
+
+Recovery records include an episode number and per-episode attempt number.
+The summary reports rearmed allowances. Each answer record also reports whether
+reference evidence was available; this is not a factual-correctness score.
+The stop explanation distinguishes failed probes from an exhausted allowance
+when the most recent probe had succeeded.
