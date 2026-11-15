@@ -2,7 +2,7 @@
 import http.client,json,re,ssl
 from .version import VERSION
 
-REPOSITORY = 'JTanthony93/GW2-VLM-COPILOT'
+REPOSITORY = 'JTanthony/GW2-VLM-COPILOT'
 RELEASES_URL = 'https://github.com/'+REPOSITORY+'/releases'
 
 def version_key(tag):

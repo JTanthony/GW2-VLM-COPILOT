@@ -45,11 +45,13 @@ class App:
         self.review=None
         self.ocr_reader=None; self.ocr_preview=None; self.ocr_preview_stamp=None
         self.ocr_executable=self.settings.get('ocr_executable','')
-        self.qwen_ocr=tk.BooleanVar(value=False)
-        self.gemma_selected=tk.BooleanVar(value=True)
+        self.qwen_ocr=tk.BooleanVar(value=self.settings.get('selected_model')=='qwen')
+        self.ocr_enabled=tk.BooleanVar(value=False)
+        self.gemma_selected=tk.BooleanVar(value=not self.qwen_ocr.get())
+        self.gemma_projector=self.settings.get('gemma_projector_path','')
         self.model_paths={'qwen':self.settings.get('qwen_model_path',''),'gemma':self.settings.get('gemma_model_path','')}
         self.settings_dialog=None;self.settings_built=False
-        self.ocr_tips=tk.BooleanVar(value=True);self.nearby_gate=None
+        self.ocr_tips=tk.BooleanVar(value=self.settings.get('ocr_tips',True));self.nearby_gate=None
         if vision_review:
             from waypoint.storage.vision_review import VisionReview
             self.review=VisionReview(ROOT); self.review.set_enabled(True)
@@ -64,10 +66,9 @@ class App:
         close_button=self.button(header,'\u00d7',self.close); close_button.configure(padx=4,font=('Segoe UI',12)); close_button.pack(side='right')
         self.fold_button=self.button(header,'\u25be',self.fold); self.fold_button.pack(side='right',pady=(0,2))
         self.fold_button.configure(font=('Segoe UI', 18),pady=1,padx=5)
-        if not getattr(sys,'frozen',False):
-            self.settings_button=self.button(header,'\u2699',self.open_settings)
-            self.settings_button.configure(font=('Segoe UI Symbol',13),padx=4)
-            self.settings_button.pack(side='right',before=self.fold_button)
+        self.settings_button=self.button(header,'\u2699',self.open_settings)
+        self.settings_button.configure(font=('Segoe UI Symbol',13),padx=4)
+        self.settings_button.pack(side='right',before=self.fold_button)
         self.pin_button=self.button(header,'\u25c6',self.pin); self.pin_button.pack(side='right')
         self.pin_button.configure(fg=ACCENT,activeforeground=ACCENT,padx=4)
         self.opacity=OvalSlider(header,lambda value:self.root.attributes('-alpha',value/100))
@@ -106,14 +107,11 @@ class App:
         self.send_button=self.button(row,'Send',self.send); self.send_button.pack(side='right')
         self.cancel_button=self.button(row,'Cancel',self.cancel); self.cancel_button.pack(side='right'); self.cancel_button.configure(state='disabled')
         self.update_available=None; self.update_checking=False; self.update_status_timer=None
-        update_parent=self.body
-        if not getattr(sys,'frozen',False):
-            self.settings_dialog=tk.Toplevel(self.root);self.settings_dialog.withdraw()
-            self.settings_dialog.protocol('WM_DELETE_WINDOW',self.settings_dialog.withdraw)
-            update_parent=self.settings_dialog
+        self.settings_dialog=tk.Toplevel(self.root);self.settings_dialog.withdraw()
+        self.settings_dialog.protocol('WM_DELETE_WINDOW',self.settings_dialog.withdraw)
+        update_parent=self.settings_dialog
         self.update_area=tk.Frame(update_parent,bg=BG)
         self.update_area.columnconfigure(0,weight=1)
-        if getattr(sys,'frozen',False):self.update_area.grid(row=5,column=0,sticky='ew')
         update_row=tk.Frame(self.update_area,bg=BG); update_row.grid(row=0,column=0,sticky='ew',padx=8,pady=(0,3))
         self.auto_updates=tk.BooleanVar(value=self.settings.get('check_updates_on_launch',True))
         tk.Checkbutton(update_row,text='Check updates on launch',variable=self.auto_updates,bg=BG,fg=MUTED,
@@ -123,7 +121,6 @@ class App:
         self.update_status.grid(row=1,column=0,sticky='ew',padx=10); self.update_status.grid_remove()
         if not getattr(sys,'frozen',False):
             ocr_row=tk.Frame(self.body,bg=BG); ocr_row.grid(row=7,column=0,sticky='ew',padx=8,pady=(0,3))
-            self.ocr_enabled=tk.BooleanVar(value=False)
             tk.Checkbutton(ocr_row,text='OCR experiment',variable=self.ocr_enabled,command=self.toggle_ocr,
                 bg=BG,fg=ACCENT,selectcolor=PANEL,activebackground=BG,font=('Segoe UI',9)).pack(side='left')
             self.button(ocr_row,'Readings',self.show_ocr_readings).pack(side='right')
@@ -132,6 +129,8 @@ class App:
             tips_row=tk.Frame(self.body,bg=BG);tips_row.grid(row=9,column=0,sticky='ew',padx=8)
             tk.Checkbutton(tips_row,text='Nearby achievement tips (Qwen + API)',variable=self.ocr_tips,
                 bg=BG,fg=MUTED,selectcolor=PANEL,activebackground=BG,font=('Segoe UI',9)).pack(side='left')
+        if getattr(sys,'frozen',False):
+            self.ocr_label=tk.Label(self.settings_dialog,text='OCR off',bg=BG,fg=MUTED,font=('Segoe UI',9))
         grip=tk.Label(self.shell,text='\u25e2',bg=BG,fg=MUTED,cursor='size_nw_se'); grip.place(relx=1,rely=1,anchor='se')
         self.resize_grip=grip
         grip.bind('<ButtonPress-1>',self.resize_start); grip.bind('<B1-Motion>',self.resize)
@@ -147,6 +146,9 @@ class App:
         if not smoke and self.auto_updates.get(): self.root.after(1200,lambda:self.check_updates(False))
         if not smoke: self.restore_saved_account()
         if smoke:
+            self.root.after(50,self.open_settings)
+            self.root.after(150,lambda:self.choose_model('qwen'))
+            self.root.after(175,lambda:self.choose_model('gemma'))
             self.root.after(100,lambda:self.resize_text(1)); self.root.after(200,self.fold); self.root.after(300,self.fold); self.root.after(450,self.close)
     def update_action(self):
         if self.update_available:
@@ -320,18 +322,17 @@ class App:
             self.feed=Feed(self.selected_window,self.assistant,self.inference_lock,self.question_pending,max_width=self.engine.config.get('capture_max_width',1280) if self.engine else 1280,review_callback=self.record_review if not getattr(sys,'frozen',False) else None,frame_callback=self.record_frame if not getattr(sys,'frozen',False) else None)
             if self.ocr_reader: self.feed.set_background_reader(self.ocr_reader)
             if self.engine and self.engine.config.get('alias')=='waypoint-qwen-ocr':
-                from waypoint.experiments.ocr_landmarks.nearby import NearbyGate
+                from waypoint.ocr.nearby import NearbyGate
                 self.nearby_gate=NearbyGate()
             else:self.nearby_gate=None
             self.feeds.append(self.feed); self.feed.start()
     def toggle_ocr(self):
-        if getattr(sys,'frozen',False): return
         enabled=self.ocr_enabled.get()
         if not enabled and getattr(self,'qwen_ocr',None) and self.qwen_ocr.get():
             self.ocr_enabled.set(True);self.status.configure(text='Qwen text-only mode requires OCR. Stop engine and deselect Qwen first.');return
         if enabled:
             try:
-                from waypoint.experiments.ocr_landmarks.reader import OCRReader
+                from waypoint.ocr.reader import OCRReader
                 if not self.ocr_executable or not Path(self.ocr_executable).is_file():
                     self.ocr_executable=filedialog.askopenfilename(parent=self.root,title='Select installed Tesseract OCR engine (tesseract.exe)',filetypes=[('Tesseract engine','tesseract.exe')])
                 if not self.ocr_executable:
@@ -344,7 +345,7 @@ class App:
         if self.feed: self.feed.set_background_reader(self.ocr_reader)
         self.ocr_label.configure(text='ON - Qwen text' if enabled and self.qwen_ocr.get() else 'ON - review only' if enabled else 'OFF')
         self.ocr_preview_stamp=None
-        self.status.configure(text='OCR review enabled. Start engine and approve a window; Readings shows extracted text. Gemma does not receive OCR yet.' if enabled else 'OCR off. Background model vision restored.')
+        self.status.configure(text='Local OCR ready. Start the engine and approve a game window to read screen text.' if enabled else 'OCR off. Background model vision restored.')
         if enabled: self.show_ocr_readings()
     def select_qwen_ocr(self):
         if self.engine or self.busy:
@@ -353,16 +354,16 @@ class App:
         self.gemma_selected.set(not self.qwen_ocr.get())
         if self.settings_built and self.settings_dialog.winfo_exists(): self.refresh_model_settings()
     def open_settings(self):
-        if getattr(sys,'frozen',False): return
         if self.settings_built:
             self.settings_dialog.deiconify();self.settings_dialog.lift();return
         dialog=self.settings_dialog
         dialog.title(APP_NAME+' - Settings');dialog.configure(bg=BG)
-        dialog.geometry('460x490');dialog.minsize(400,490);dialog.attributes('-topmost',True)
+        dialog.geometry('480x620');dialog.minsize(440,620);dialog.attributes('-topmost',True)
         dialog.iconphoto(False,self.brand_icon);dialog.transient(self.root)
         tk.Label(dialog,text='Model settings',bg=BG,fg=TEXT,font=('Segoe UI Semibold',12)).pack(anchor='w',padx=16,pady=(16,8))
-        self.load_model_button=self.button(dialog,'Load model...',self.pick_model)
-        self.load_model_button.pack(anchor='w',padx=16)
+        model_row=tk.Frame(dialog,bg=BG);model_row.pack(fill='x',padx=16)
+        self.load_model_button=self.button(model_row,'Load model...',self.pick_model)
+        self.load_model_button.pack(side='left')
         self.model_path_label=tk.Label(dialog,bg=BG,fg=MUTED,wraplength=420,justify='left',anchor='w')
         self.model_path_label.pack(fill='x',padx=16,pady=(4,8))
         self.model_choices=[]
@@ -371,15 +372,36 @@ class App:
                 bg=BG,fg=TEXT,selectcolor=PANEL,activebackground=BG,activeforeground=TEXT)
             control.pack(anchor='w',padx=12);self.model_choices.append(control)
             recommendation='Recommended for GPUs with 8GB or less.' if key=='qwen' else 'Recommended for GPUs with 12GB or more.'
-            tk.Label(dialog,text=recommendation,bg=BG,fg=MUTED,font=('Segoe UI',9),anchor='w').pack(anchor='w',padx=34,pady=(0,5))
-        row=tk.Frame(dialog,bg=PANEL);row.pack(fill='x',padx=16,pady=(12,4))
+            recommendation_label=tk.Label(dialog,text=recommendation,bg=BG,fg=MUTED,font=('Segoe UI',9),anchor='w')
+            recommendation_label.pack(anchor='w',padx=34,pady=(0,5))
+        self.gemma_recommendation=recommendation_label
+        self.gemma_setup=tk.Frame(dialog,bg=BG)
+        tk.Label(self.gemma_setup,text='Chat and wiki research use the main model. Screen vision also requires the matching vision companion (mmproj).',
+            bg=BG,fg=MUTED,wraplength=375,justify='left').pack(anchor='w')
+        gemma_row=tk.Frame(self.gemma_setup,bg=BG);gemma_row.pack(anchor='w',pady=4)
+        self.gemma_download_button=self.button(gemma_row,'Download Gemma files',
+            lambda:webbrowser.open('https://huggingface.co/lmstudio-community/gemma-4-12B-it-QAT-GGUF/tree/main'))
+        self.gemma_download_button.pack(side='left')
+        self.projector_button=self.button(gemma_row,'Choose vision companion...',self.pick_projector)
+        self.projector_button.pack(side='left',padx=(6,0))
+        self.projector_path_label=tk.Label(self.gemma_setup,bg=BG,fg=MUTED,wraplength=375,justify='left')
+        self.projector_path_label.pack(anchor='w')
+        row=tk.Frame(dialog,bg=BG);row.pack(anchor='w',padx=34,pady=(0,4),before=self.model_choices[1])
+        self.qwen_download_button=self.button(row,'Download Qwen model',
+            lambda:webbrowser.open('https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/blob/main/Qwen3.5-4B-Q4_K_M.gguf'))
         self.ocr_download_button=self.button(row,'Download Tesseract OCR',lambda:webbrowser.open('https://github.com/UB-Mannheim/tesseract/wiki'))
-        self.ocr_download_button.pack(side='left',padx=4,pady=4)
-        self.ocr_folder_button=self.button(row,'Choose OCR folder...',self.pick_ocr_folder)
-        self.ocr_folder_button.pack(side='right',padx=4,pady=4)
-        self.ocr_path_label=tk.Label(dialog,bg=BG,fg=MUTED,wraplength=420,justify='left',anchor='w')
-        self.ocr_path_label.pack(fill='x',padx=16)
+        self.ocr_download_button.pack(side='left',pady=4)
+        folder_row=tk.Frame(dialog,bg=BG)
+        folder_row.pack(fill='x',padx=34,pady=(0,5),before=self.model_choices[1])
+        self.ocr_folder_button=self.button(folder_row,'Choose OCR folder...',self.pick_ocr_folder)
+        self.ocr_folder_button.pack(anchor='w')
+        self.ocr_path_label=tk.Label(folder_row,bg=BG,fg=MUTED,wraplength=365,justify='left',anchor='w')
+        self.ocr_path_label.pack(fill='x',pady=(3,0))
         tk.Label(dialog,text='Stop the engine before changing models. Start engine loads your selection.',bg=BG,fg=MUTED,wraplength=420,justify='left').pack(anchor='w',padx=16,pady=12)
+        if getattr(sys,'frozen',False):self.ocr_label.pack(anchor='w',padx=16,pady=4)
+        self.tips_setting=tk.Checkbutton(dialog,text='Nearby achievement hints',variable=self.ocr_tips,
+            command=self.save_preferences,bg=BG,fg=TEXT,selectcolor=PANEL,activebackground=BG,activeforeground=TEXT)
+        self.tips_setting.pack(anchor='w',padx=12)
         self.update_area.pack(side='bottom',fill='x',padx=8,pady=12)
         self.settings_built=True
         self.refresh_model_settings();dialog.deiconify()
@@ -389,24 +411,49 @@ class App:
         if not self.engine and not self.busy:
             if key=='gemma' and self.ocr_reader:
                 self.ocr_enabled.set(False);self.toggle_ocr()
-            self.status.configure(text=('Qwen 4B with OCR' if self.qwen_ocr.get() else 'Gemma 12B QAT with vision')+' selected. Start engine when ready.')
+            self.status.configure(text=('Qwen 4B with OCR' if self.qwen_ocr.get() else 'Gemma 12B QAT')+' selected. Start engine when ready.')
     def selected_model_path(self):
         key='qwen' if self.qwen_ocr.get() else 'gemma'
         if self.model_paths[key]:return Path(self.model_paths[key])
-        if key=='qwen':return ROOT/'local-data/models/qwen3.5-4b/Qwen3.5-4B-Q4_K_M.gguf'
-        try:return Path(json.loads((ROOT/'config/inference.local.json').read_text('utf-8'))['model_path'])
-        except (OSError,ValueError,KeyError):return ROOT/'Models'
+        if key=='qwen':
+            try:
+                config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8'))
+                if config.get('model_family')=='qwen':return Path(config['model_path'])
+            except (OSError,ValueError,KeyError):pass
+            return ROOT/'local-data/models/qwen3.5-4b/Qwen3.5-4B-Q4_K_M.gguf'
+        try:
+            config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8'))
+            return ASSETS/'Models/gemma-4-12B-it-QAT-Q4_0.gguf' if config.get('model_family')=='qwen' else Path(config['model_path'])
+        except (OSError,ValueError,KeyError):return ASSETS/'Models'
     def refresh_model_settings(self):
         locked=bool(self.engine or self.busy);qwen=self.qwen_ocr.get()
         for control in [self.load_model_button,*self.model_choices]:control.configure(state='disabled' if locked else 'normal')
         for control in (self.ocr_download_button,self.ocr_folder_button):
             control.configure(state='normal' if qwen and not locked else 'disabled',fg=TEXT if qwen else MUTED)
-        self.model_path_label.configure(text=str(self.selected_model_path()))
+        self.projector_button.configure(state='normal' if not qwen and not locked else 'disabled')
+        self.ocr_download_button.pack_configure(padx=(6,0) if qwen else 0)
+        if qwen:
+            self.gemma_setup.pack_forget()
+            self.qwen_download_button.pack(side='left',pady=4,before=self.ocr_download_button)
+        else:
+            self.qwen_download_button.pack_forget()
+            self.gemma_setup.pack(anchor='w',padx=34,after=self.gemma_recommendation)
+            projector=self.gemma_projector
+            if not projector:
+                try:
+                    projector=json.loads((ROOT/'config/inference.local.json').read_text('utf-8')).get('projector_path')
+                except (OSError,ValueError):
+                    pass
+            self.projector_path_label.configure(text=(
+                'Vision companion: '+Path(projector).name if projector else 'Chat only. Add a vision companion to enable screen vision.'
+            ))
+        self.load_model_button.configure(text='Load Qwen model...' if qwen else 'Load Gemma model...')
+        self.model_path_label.configure(text=('Gemma 4 12B QAT model (required)\n' if not qwen else '')+str(self.selected_model_path()))
         self.ocr_path_label.configure(text=(str(Path(self.ocr_executable).parent) if self.ocr_executable else 'Choose the installed Tesseract OCR folder.') if qwen else 'OCR setup is available with 4B Qwen.')
     def pick_model(self):
         if self.engine or self.busy:return
         current=self.selected_model_path();folder=current if current.is_dir() else current.parent
-        if not folder.is_dir():folder=ROOT/'Models' if (ROOT/'Models').is_dir() else ROOT
+        if not folder.is_dir():folder=ASSETS/'Models' if (ASSETS/'Models').is_dir() else ASSETS
         selected=filedialog.askopenfilename(parent=self.settings_dialog,title='Load Qwen 4B model' if self.qwen_ocr.get() else 'Load Gemma 12B QAT model',initialdir=str(folder),filetypes=[('GGUF model','*.gguf')])
         if not selected:return
         path=Path(selected)
@@ -414,6 +461,12 @@ class App:
             messagebox.showerror('Model file','Choose a model GGUF, rather than a vision projector.',parent=self.settings_dialog);return
         self.model_paths['qwen' if self.qwen_ocr.get() else 'gemma']=str(path)
         self.refresh_model_settings();self.save_preferences()
+    def pick_projector(self):
+        if self.engine or self.busy or self.qwen_ocr.get():return
+        selected=filedialog.askopenfilename(parent=self.settings_dialog,title='Select the matching Gemma vision companion',initialdir=str(self.selected_model_path().parent),filetypes=[('Vision companion GGUF','*.gguf')])
+        if selected and Path(selected).is_file():
+            self.gemma_projector=selected;self.refresh_model_settings();self.save_preferences()
+            self.status.configure(text='Gemma vision companion selected. Start engine to load it.')
     def pick_ocr_folder(self):
         if self.engine or self.busy or not self.qwen_ocr.get():return
         folder=filedialog.askdirectory(parent=self.settings_dialog,title='Select the folder containing tesseract.exe',initialdir=str(Path(self.ocr_executable).parent) if self.ocr_executable else 'C:/Program Files')
@@ -426,7 +479,7 @@ class App:
             self.qwen_ocr.set(False);self.ocr_enabled.set(False);self.toggle_ocr();self.qwen_ocr.set(True)
         self.ocr_executable=str(executable);self.refresh_model_settings();self.save_preferences()
     def save_preferences(self):
-        if not self.smoke:preferences.save(ROOT,{'font_size':self.size,'opacity':self.opacity.value,'check_updates_on_launch':self.auto_updates.get(),'ocr_executable':self.ocr_executable,'qwen_model_path':self.model_paths['qwen'],'gemma_model_path':self.model_paths['gemma']})
+        if not self.smoke:preferences.save(ROOT,{'font_size':self.size,'opacity':self.opacity.value,'check_updates_on_launch':self.auto_updates.get(),'ocr_executable':self.ocr_executable,'qwen_model_path':self.model_paths['qwen'],'gemma_model_path':self.model_paths['gemma'],'gemma_projector_path':self.gemma_projector,'selected_model':'qwen' if self.qwen_ocr.get() else 'gemma','ocr_tips':self.ocr_tips.get()})
     def show_ocr_readings(self):
         if getattr(sys,'frozen',False): return
         if self.ocr_preview and self.ocr_preview.winfo_exists(): self.ocr_preview.lift(); return
@@ -509,11 +562,14 @@ class App:
         self.cancel_button.configure(state='normal' if busy and self.assistant else 'disabled')
     def toggle(self):
         if self.busy: return
-        use_qwen=not getattr(sys,'frozen',False) and self.qwen_ocr.get()
+        use_qwen=self.qwen_ocr.get()
         if not self.engine and use_qwen and not self.ocr_reader:
             self.ocr_enabled.set(True);self.toggle_ocr()
             if not self.ocr_reader:return
-        selected_model=self.selected_model_path() if not getattr(sys,'frozen',False) else None
+        selected_model=self.selected_model_path()
+        if not self.engine and not selected_model.is_file():
+            self.status.configure(text='Choose an existing model file in Settings before starting the engine.');self.open_settings();return
+        selected_projector=self.gemma_projector
         self.lock(True); self.status.configure(text='Stopping engine\u2026' if self.engine else 'Loading local model\u2026')
         def work():
             try:
@@ -523,11 +579,12 @@ class App:
                     self.feeds.clear(); self.engine.stop(); self.events.put(('stopped',None))
                 else:
                     if use_qwen:
-                        from waypoint.experiments.ocr_landmarks.qwen import profile,OCRAssistant,TextOnlyClient
+                        from waypoint.ocr.qwen import profile,OCRAssistant,TextOnlyClient
                         config=profile(ROOT);assistant_type=OCRAssistant;client_type=TextOnlyClient
                     else:
                         config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8'));assistant_type=Assistant;client_type=Client
                     if selected_model is not None:config['model_path']=str(selected_model)
+                    if not use_qwen and selected_projector:config['projector_path']=selected_projector
                     engine=Engine(config,ROOT);engine.start()
                     self.events.put(('started',(engine,assistant_type(client_type(f"http://127.0.0.1:{config['port']}/v1",model=config.get('alias','waypoint-gemma')),accounts=self.accounts,allowed_sources=('Guild Wars 2',)))))
             except Exception as exc: self.events.put(('error',str(exc)))
@@ -572,7 +629,7 @@ class App:
                 with self.inference_lock:
                     if self.cancelled.is_set(): self.events.put(('cancelled',None)); return
                     if qwen_mode:
-                        from waypoint.experiments.ocr_landmarks.qwen import reasoning_observation
+                        from waypoint.ocr.qwen import reasoning_observation
                         ocr=feed.ocr_context(max_age=15) if feed and not is_greeting(question) else None
                         if feed and self.ocr_reader and needs_screen(question) and (not ocr or force_new_analysis(question)):
                             stamp,png=feed.snapshot(max_age=7)
@@ -617,13 +674,18 @@ class App:
         threading.Thread(target=work,daemon=True).start()
     def cancel(self): self.cancelled.set(); self.cancel_button.configure(state='disabled'); self.status.configure(text='Cancelling: current request finishes, then its result is discarded.')
     def announce_achievement_count(self):
-        if self.ocr_reader: return  # Raw OCR has not passed recognition validation.
+        if not self.ocr_tips.get(): return
         intro=getattr(self,'achievement_intro',None)
         if not intro or intro.sent or self.busy or self.closing or not self.feed: return
         try: self.feed.snapshot(max_age=7)
         except RuntimeError:
             intro.reason='Waiting for recent game frames'; return
-        observation,age,stamp=self.feed.observation_context(max_age=90,include_stamp=True)
+        if self.ocr_reader:
+            ocr=self.feed.ocr_context()
+            if not ocr: return
+            stamp,observation=ocr
+        else:
+            observation,age,stamp=self.feed.observation_context(max_age=90,include_stamp=True)
         with self.accounts.lock:
             snapshot=self.accounts.snapshot if self.accounts.key and self.accounts.selected_game=='Guild Wars 2' else None
         if snapshot is None:
@@ -652,7 +714,7 @@ class App:
         # Never queue proactive work behind player chat or active model work.
         if not self.inference_lock.acquire(blocking=False):return
         from datetime import datetime,timezone
-        from waypoint.experiments.ocr_landmarks.nearby import verify
+        from waypoint.ocr.nearby import verify
         stamp,observation=ocr
         previous_stamp=gate.seen_stamp
         rule=gate.consider(observation,stamp,snapshot,datetime.now(timezone.utc),time.monotonic())
@@ -724,7 +786,7 @@ class App:
             state=self.feed.state(); age=state['observation_age_seconds']
             detail=f'last analyzed frame {age:.0f}s old' if age is not None else ('analyzing first frame\u2026' if state['analyzing'] else 'waiting for game frames')
             intro=getattr(self,'achievement_intro',None)
-            if intro and not intro.sent: detail+=' | '+intro.reason
+            if intro and not intro.sent and self.ocr_tips.get(): detail+=' | '+intro.reason
             if self.ocr_reader:
                 gate=getattr(self,'nearby_gate',None)
                 detail=gate.reason if gate and self.ocr_tips.get() else 'Qwen text - nearby tips off' if gate else 'review only - open Readings'

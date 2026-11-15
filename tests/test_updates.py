@@ -20,7 +20,7 @@ class UpdateTests(unittest.TestCase):
     def test_stable_release_follows_alpha_and_untrusted_urls_not_used(self):
         data=release('v0.1.10',html_url='https://example.com',prerelease=False)
         result=newer_windows_release([data],'0.1.10-alpha')
-        self.assertEqual(result['url'],'https://github.com/JTanthony93/GW2-VLM-COPILOT/releases/tag/v0.1.10')
+        self.assertEqual(result['url'],'https://github.com/JTanthony/GW2-VLM-COPILOT/releases/tag/v0.1.10')
         self.assertIsNone(version_key('v0.1.11/../../other'))
     def test_numeric_prerelease_and_stable_order(self):
         self.assertLess(version_key('1.0.0-alpha.2'),version_key('1.0.0-alpha.10'))

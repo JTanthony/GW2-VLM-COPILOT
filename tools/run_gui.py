@@ -9,6 +9,9 @@ from waypoint.paths import data_root
 from waypoint.branding import APP_NAME
 
 def launch():
+    # Reject source-only capture options before first-run setup can open.
+    if getattr(sys,'frozen',False) and any(arg.split('=',1)[0]=='--vision-review' for arg in sys.argv[1:]):
+        raise SystemExit(2)
     if '--check-package' in sys.argv:
         check_package();return
     if '--smoke' not in sys.argv and ('--setup' in sys.argv or not (data_root()/'config/inference.local.json').exists()):
@@ -40,6 +43,13 @@ def check_package():
     from waypoint.paths import app_root
     from waypoint.integrations.credentials import protect
     import numpy,cv2,windows_capture
+    from waypoint.ocr.reader import OCRReader
+    from waypoint.ocr.qwen import OCRAssistant,TextOnlyClient
+    from waypoint.ocr.nearby import NearbyGate
+    if getattr(sys,'frozen',False):
+        import importlib.util
+        for module in ('waypoint.experiments','waypoint.testing','waypoint.storage.vision_review','waypoint.ui.player_setup'):
+            assert importlib.util.find_spec(module) is None, 'Developer module bundled: '+module
     root=tk.Tk();root.withdraw()
     for name in ('branding/gw2-vlm-copilot-24.png','branding/gw2-vlm-copilot-32.png','ui/slider-thumb.png'):
         tk.PhotoImage(file=str(app_root()/'assets'/name))

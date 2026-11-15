@@ -31,6 +31,6 @@ def main(argv=None):
     return run_existing(['--account-mode','none',*args],copilot_profile=config,
         assistant_factory=OCRAssistant,client_factory=TextOnlyClient,
         report_folder=REPORT_FOLDER,copilot_label='Qwen 3.5 4B Q4_K_M (OCR text-only profile)',
-        review_files_extra=('experiments/ocr_landmarks/qwen.py',),conflict_ports=(17865,),source_preflight=check_wiki_available)
+        review_files_extra=('ocr/qwen.py',),conflict_ports=(17865,),source_preflight=check_wiki_available)
 
 if __name__=='__main__':sys.exit(main())
