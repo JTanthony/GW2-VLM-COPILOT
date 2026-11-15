@@ -1,4 +1,5 @@
 import json,sys,unittest
+from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import MagicMock,patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
@@ -18,6 +19,11 @@ class InferenceTests(unittest.TestCase):
             with self.assertRaises(ValueError): Client(url)
     def test_redirects_rejected(self):
         with self.assertRaises(ValueError): NoRedirect().redirect_request(None,None,None,None,None,None)
+    def test_local_client_starts_when_ssl_context_is_unavailable(self):
+        with patch('ssl.create_default_context', side_effect=FileNotFoundError):
+            client = Client('http://127.0.0.1:17865/v1')
+        self.assertIn('http', client.opener.handle_open)
+        self.assertNotIn('https', client.opener.handle_open)
     def test_incomplete_empty_and_tool_responses_rejected(self):
         for choice in [{'finish_reason':'length','message':{'content':'partial'}},{'finish_reason':'stop','message':{'content':''}},{'finish_reason':'stop','message':{'content':'answer','tool_calls':[{}]}}]:
             c=Client('http://127.0.0.1:17865/v1'); c.opener=MagicMock()
@@ -70,4 +76,24 @@ class InferenceTests(unittest.TestCase):
         e=Engine({},'.'); e.stop()
         e.process=MagicMock(); e.process.poll.return_value=None; e.stop()
         e.process.terminate.assert_called_once(); e.process.wait.assert_called_once_with(timeout=10)
+
+    def test_engine_falls_back_from_stale_saved_path_to_install_runtime(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = root/'install'/'runtime'
+            runtime.mkdir(parents=True)
+            server = runtime/'llama-server.exe'
+            server.touch()
+            model = root/'model.gguf'
+            model.touch()
+            engine = Engine({'executable':'old/llama-server.exe','model_path':str(model),'port':17865},
+                            root, runtime_dir=runtime)
+            with patch('waypoint.inference.engine.socket.socket') as socket, \
+                 patch('waypoint.inference.engine.subprocess.Popen', side_effect=OSError('test launch')) as spawn:
+                socket.return_value.__enter__.return_value.connect_ex.return_value = 1
+                with self.assertRaisesRegex(RuntimeError,'Windows could not start llama-server.exe'):
+                    engine.start()
+                self.assertEqual(spawn.call_args.args[0][0],str(server.resolve()))
+                self.assertEqual(spawn.call_args.kwargs['cwd'],runtime.resolve())
+                self.assertIn('test launch', (root/'local-data'/'engine.log').read_text())
 if __name__=='__main__': unittest.main()

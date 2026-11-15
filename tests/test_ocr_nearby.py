@@ -10,6 +10,57 @@ def snapshot(done=False):return {'fetched_at':NOW.isoformat(),'records':[{'id':3
 def observation():return {'visible_text':['OCR upper right: Facing the Truth','OCR upper left: Wedge Symbol! Hollow,','OCR upper right: wedge symbols: 0/5']}
 
 class NearbyTests(unittest.TestCase):
+    def test_ui_map_intro_reads_ocr_and_respects_hints_switch(self):
+        from waypoint.ui.app import App
+        from waypoint.assistant.achievement_intro import AchievementIntro
+        app=App.__new__(App)
+        app.ocr_tips=MagicMock();app.ocr_tips.get.return_value=True
+        app.ocr_reader=MagicMock();app.feed=MagicMock()
+        app.busy=False;app.closing=False
+        app.achievement_intro=AchievementIntro({'verified_at':'test','maps':[{'map_name':'Test Map',
+            'category_id':1,'achievements':[{'id':10}]}]})
+        app.accounts=MagicMock()
+        app.accounts.selected_game='Guild Wars 2'
+        app.accounts.snapshot={'fetched_at':NOW.isoformat(),'records':[{'id':10,'done':True}]}
+        app.append=MagicMock();app.mark_response=MagicMock();app.record_review=MagicMock()
+        app.assistant=MagicMock();app.assistant.history=[]
+        obs={'visible_text':['OCR upper left: Test Map','OCR upper left: Completion']}
+        app.feed.ocr_context.return_value=(1,obs)
+        app.announce_achievement_count()
+        app.feed.ocr_context.return_value=(2,obs)
+        app.announce_achievement_count()
+        app.append.assert_called_once()
+        self.assertIn('1/1',app.append.call_args.args[1])
+        app.feed.observation_context.assert_not_called()
+        app.ocr_tips.get.return_value=False
+        app.feed.ocr_context.reset_mock()
+        app.announce_achievement_count()
+        app.feed.ocr_context.assert_not_called()
+
+    def test_new_landmarks_require_local_text_and_unfinished_account_record(self):
+        cases={
+            'lohrashi-dive':['Lohrashi the Mournful','Defeat Lohrashi the','Time limit:'],
+            'forgotten-teleporter':['Forgotten Teleporter'],
+        }
+        for rule,lines in cases.items():
+            obs={'visible_text':['OCR upper right: '+line for line in lines]}
+            self.assertTrue(matches(rule,obs))
+            snap={'fetched_at':NOW.isoformat(),'records':[{'id':RULES[rule]['id'],'done':False}]}
+            gate=NearbyGate()
+            self.assertIsNone(gate.consider(obs,100,snap,NOW,102))
+            self.assertEqual(gate.consider(obs,107,snap,NOW,109),rule)
+            self.assertIsNotNone(gate.deliver(rule,True,obs,107,snap,NOW,110))
+            for record in ([],[{'id':RULES[rule]['id'],'done':True}]):
+                blocked=NearbyGate()
+                blocked_snapshot={'fetched_at':NOW.isoformat(),'records':record}
+                self.assertIsNone(blocked.consider(obs,100,blocked_snapshot,NOW,102))
+                self.assertIsNone(blocked.consider(obs,107,blocked_snapshot,NOW,109))
+            self.assertFalse(matches(rule,{'visible_text':['OCR upper right: [uncertain] '+line for line in lines]}))
+        self.assertFalse(matches('lohrashi-dive',{'visible_text':['OCR upper right: Lohrashi the Mournful']}))
+        self.assertFalse(matches('forgotten-teleporter',{'visible_text':[
+            'OCR upper right: Kaidenna and a small band of Followers of',
+            'OCR upper right: Ascension seek a Forgotten teleporter to access']}))
+
     def delivery_app(self):
         from waypoint.ui.app import App
         app=App.__new__(App);app.closing=False;app.busy=False

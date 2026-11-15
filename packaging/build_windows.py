@@ -33,6 +33,7 @@ def assemble(folder, portable=True):
     if portable:
         for name in ('Uninstall.cmd','Uninstall.ps1'):shutil.copy2(ROOT/'packaging'/name,folder/name)
     (folder/'Models').mkdir(exist_ok=True)
+    (folder/'runtime').mkdir(exist_ok=True)
     for name in ('WINDOWS_PACKAGE.md','THIRD_PARTY.md','PRIVACY.md'):
         target=folder/'docs'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'docs'/name,target)
     licenses=folder/'THIRD-PARTY-LICENSES';licenses.mkdir(exist_ok=True)
@@ -59,6 +60,7 @@ def assemble(folder, portable=True):
     archive=output/f'GW2-VLM-COPILOT-v{VERSION}-windows-x64.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as zipped:
         zipped.writestr(folder.name+'/Models/',b'')
+        zipped.writestr(folder.name+'/runtime/',b'')
         for path in folder.rglob('*'):
             if path.is_file():zipped.write(path,Path(folder.name)/path.relative_to(folder))
     digest=hashlib.sha256(archive.read_bytes()).hexdigest()

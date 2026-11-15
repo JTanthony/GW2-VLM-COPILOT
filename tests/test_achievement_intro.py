@@ -9,6 +9,27 @@ SNAPSHOT={'fetched_at':'2026-10-17T15:00:00+00:00','records':[{'id':1,'done':Tru
           {'id':2,'done':False,'current':10,'max':10},{'id':3,'done':True}]}
 
 class IntroTests(unittest.TestCase):
+    def test_ocr_map_title_requires_completion_heading_and_two_fresh_passes(self):
+        intro=AchievementIntro(TABLE)
+        obs={'map':None,'visible_text':['OCR upper left: Test Map','OCR upper left: Completion']}
+        self.assertIsNone(intro.consider(obs,1,SNAPSHOT))
+        self.assertIsNone(intro.consider(obs,1,SNAPSHOT))
+        message=intro.consider(obs,2,SNAPSHOT)
+        self.assertIn('For the displayed map:',message)
+        self.assertIn('1/2',message)
+        self.assertIsNone(intro.consider(obs,3,SNAPSHOT))
+
+    def test_ocr_map_rejects_tracker_uncertain_and_interrupted_titles(self):
+        intro=AchievementIntro(TABLE)
+        valid={'visible_text':['OCR upper left: Test Map','OCR upper left: Completion']}
+        for lines in (['OCR upper right: Test Map','OCR upper left: Completion'],
+                      ['OCR upper left: [uncertain] Test Map','OCR upper left: Completion'],
+                      ['OCR upper left: Test Map']):
+            self.assertIsNone(intro.consider(valid,1,SNAPSHOT))
+            self.assertIsNone(intro.consider({'visible_text':lines},2,SNAPSHOT))
+            self.assertIsNone(intro.consider(valid,3,SNAPSHOT))
+            intro=AchievementIntro(TABLE)
+
     def test_two_distinct_observations_then_one_message_only(self):
         intro=AchievementIntro(TABLE); obs={'map':'Test Map','summary':'Player exploring.'}
         self.assertIsNone(intro.consider(obs,1,SNAPSHOT))

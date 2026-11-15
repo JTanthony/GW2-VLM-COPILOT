@@ -53,7 +53,7 @@ class Resources:
         self.ensure(self.project)
     def remember(self,question):
         commands=((r'(?is)^\s*(?:remember(?: that)?\s*:?|save note\s*:)\s+(.+)$','notes/requests.json'),
-                  (r'(?is)^\s*(?:my goal is|save goal\s*:)\s+(.+)$','goals.json'),
+                  (r'(?is)^\s*(?:my goal is|my current goal(?: is)?\s*:?|save goal\s*:)\s+(.+)$','goals.json'),
                   (r'(?is)^\s*(?:my preference is|save preference\s*:)\s+(.+)$','preferences.json'))
         for pattern,filename in commands:
             match=re.match(pattern,question)

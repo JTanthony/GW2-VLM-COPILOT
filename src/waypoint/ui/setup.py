@@ -1,11 +1,19 @@
 """Explicit local setup for Gemma vision or Qwen OCR; no downloads or capture."""
 import json
+import webbrowser
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog,messagebox
 from waypoint.paths import app_root,data_root
 from waypoint.branding import APP_NAME
 from waypoint.storage import preferences
+
+LLAMA_RELEASE_URL = 'https://github.com/ggml-org/llama.cpp/releases/tag/b12387'
+LLAMA_DOWNLOAD_LABEL = 'Download llama.cpp Windows x64 (CUDA 12) and CUDA 12.4 DLLs'
+LLAMA_FOLDER_HELP = (
+    'Choose Windows x64 (CUDA 12.4) and the matching CUDA 12.4 DLLs. '
+    'Extract both ZIPs and place all files in \\GW2-VLM-COPILOT\\runtime. '
+)
 
 
 def setup_values(values,family):
@@ -43,15 +51,24 @@ def configure():
     for text,value in [('4B Qwen (OCR)', 'qwen'),('12B Gemma QAT (vision)','gemma')]:
         tk.Radiobutton(choices,text=text,value=value,variable=family).pack(side='left')
     fields={};labels={};entries={};buttons={}
+    runtime=app_root()/'runtime'
+    server=runtime/'llama-server.exe'
     for name,label,pattern in [('executable','llama.cpp server: llama-server.exe','*.exe'),('model_path','Model GGUF','*.gguf'),('projector_path','Gemma vision companion (optional for chat)','*.gguf'),('ocr_folder','Tesseract OCR installation folder',None)]:
         row=tk.Frame(root);row.pack(fill='x',padx=16,pady=7)
         labels[name]=tk.Label(row,text=label);labels[name].pack(anchor='w')
         value=tk.StringVar();fields[name]=value
+        if name == 'executable' and server.is_file():
+            value.set(str(server))
         entries[name]=tk.Entry(row,textvariable=value);entries[name].pack(side='left',fill='x',expand=True)
         def pick(v=value,p=pattern):
             selected=filedialog.askdirectory(parent=root,title='Choose installed Tesseract OCR folder') if p is None else filedialog.askopenfilename(parent=root,initialdir=str(app_root()/'Models') if (app_root()/'Models').is_dir() else str(app_root()),filetypes=[('Model or executable',p)])
             if selected:v.set(selected)
         buttons[name]=tk.Button(row,text='Browse',command=pick);buttons[name].pack(side='right')
+        if name == 'executable':
+            tk.Button(root, text=LLAMA_DOWNLOAD_LABEL,
+                      command=lambda: webbrowser.open(LLAMA_RELEASE_URL)).pack(anchor='w', padx=16)
+            tk.Label(root, text=LLAMA_FOLDER_HELP + ' Browse to that EXE above.',
+                     wraplength=620, justify='left').pack(anchor='w', padx=16)
     def refresh(*_):
         qwen=family.get()=='qwen'
         labels['model_path'].configure(text='Qwen 3.5 4B Q4_K_M GGUF' if qwen else 'Gemma 4 12B QAT Q4_0 GGUF')

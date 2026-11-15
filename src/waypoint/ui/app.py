@@ -14,6 +14,7 @@ from waypoint.storage import preferences
 from waypoint.capture.windows import list_windows
 from waypoint.capture.feed import Feed
 from waypoint.inference.engine import Engine
+from waypoint.ui.setup import LLAMA_DOWNLOAD_LABEL, LLAMA_FOLDER_HELP, LLAMA_RELEASE_URL
 from waypoint.inference.client import Client
 from waypoint.assistant.local import Assistant
 from waypoint.assistant.achievement_intro import AchievementIntro
@@ -358,7 +359,7 @@ class App:
             self.settings_dialog.deiconify();self.settings_dialog.lift();return
         dialog=self.settings_dialog
         dialog.title(APP_NAME+' - Settings');dialog.configure(bg=BG)
-        dialog.geometry('480x620');dialog.minsize(440,620);dialog.attributes('-topmost',True)
+        dialog.geometry('480x690');dialog.minsize(440,690);dialog.attributes('-topmost',True)
         dialog.iconphoto(False,self.brand_icon);dialog.transient(self.root)
         tk.Label(dialog,text='Model settings',bg=BG,fg=TEXT,font=('Segoe UI Semibold',12)).pack(anchor='w',padx=16,pady=(16,8))
         model_row=tk.Frame(dialog,bg=BG);model_row.pack(fill='x',padx=16)
@@ -366,6 +367,10 @@ class App:
         self.load_model_button.pack(side='left')
         self.model_path_label=tk.Label(dialog,bg=BG,fg=MUTED,wraplength=420,justify='left',anchor='w')
         self.model_path_label.pack(fill='x',padx=16,pady=(4,8))
+        self.button(dialog, LLAMA_DOWNLOAD_LABEL,
+                    lambda: webbrowser.open(LLAMA_RELEASE_URL)).pack(anchor='w',padx=16)
+        tk.Label(dialog, text=LLAMA_FOLDER_HELP,
+                 bg=BG, fg=MUTED, wraplength=400, justify='left').pack(anchor='w', padx=16, pady=(4,8))
         self.model_choices=[]
         for label,var,key in [('4B Qwen',self.qwen_ocr,'qwen'),('12B Gemma QAT',self.gemma_selected,'gemma')]:
             control=tk.Checkbutton(dialog,text=label,variable=var,command=lambda k=key:self.choose_model(k),
@@ -585,7 +590,7 @@ class App:
                         config=json.loads((ROOT/'config/inference.local.json').read_text('utf-8'));assistant_type=Assistant;client_type=Client
                     if selected_model is not None:config['model_path']=str(selected_model)
                     if not use_qwen and selected_projector:config['projector_path']=selected_projector
-                    engine=Engine(config,ROOT);engine.start()
+                    engine=Engine(config,ROOT,runtime_dir=ASSETS/'runtime');engine.start()
                     self.events.put(('started',(engine,assistant_type(client_type(f"http://127.0.0.1:{config['port']}/v1",model=config.get('alias','waypoint-gemma')),accounts=self.accounts,allowed_sources=('Guild Wars 2',)))))
             except Exception as exc: self.events.put(('error',str(exc)))
         threading.Thread(target=work,daemon=True).start()

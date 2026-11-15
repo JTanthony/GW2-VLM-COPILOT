@@ -18,6 +18,21 @@ class AchievementIntro:
             self.reason='Waiting for a readable map name'
             self.previous=None; return None
         browsing=bool(re.search(r'(?i)\b(?:map view|world map|viewing.{0,35}map)\b',summary))
+        ocr=any(text.startswith('OCR ') for text in observation.get('visible_text',[]))
+        if ocr:
+            # A watched achievement or story tracker can mention another map.
+            # Require an exact map title beside the map's completion heading.
+            labels=[text.removeprefix('OCR upper left: ').strip()
+                    for text in observation.get('visible_text',[])
+                    if text.startswith('OCR upper left: ') and '[uncertain]' not in text]
+            named=[row['map_name'] for row in self.table['maps']
+                   if row['map_name'].casefold() in {label.casefold() for label in labels}]
+            if len(named)!=1 or not any(label.casefold()=='completion' for label in labels):
+                self.previous=None
+                self.reason='Waiting for a readable OCR map title and completion heading'
+                return None
+            observation={**observation,'map':None,'visible_text':['Map displayed: '+named[0]]}
+            browsing=True
         visible={re.sub(r'(?i)^Map displayed:\s*','',text).strip().casefold()
                  for text in observation.get('visible_text',[])}
         named=[row['map_name'] for row in self.table['maps'] if row['map_name'].casefold() in visible]
@@ -46,7 +61,7 @@ class AchievementIntro:
             self.reason='Waiting for a supported map or episode'
             self.previous=None; return None
         candidate=(kind,name)
-        stable=explicit_map or self.previous==candidate; self.previous=candidate
+        stable=(explicit_map and not ocr) or self.previous==candidate; self.previous=candidate
         if not stable:
             self.reason='Confirming map on the next vision pass'
             return None
