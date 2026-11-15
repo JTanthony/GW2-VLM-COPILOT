@@ -1,5 +1,8 @@
 # GW2 VLM COPILOT
 
+The next Windows package supports Settings, Qwen 4B with Tesseract OCR, and
+Gemma 12B QAT with its vision companion. See the [Windows user setup guide](packaging/WINDOWS_README.md) for both options.
+
 Experimental Windows local AI copilot for Guild Wars 2. Ask questions, research the official wiki, optionally connect account progress, or approve continuous local window vision. Free, MIT-licensed project code; community contributions welcome. Not affiliated with or endorsed by ArenaNet or Google.
 
 A portable Windows alpha is available on the [Releases page](https://github.com/JTanthony93/GW2-VLM-COPILOT/releases). Extract the ZIP and open GW2-VLM-COPILOT.exe; Python is bundled. See [Windows package instructions](docs/WINDOWS_PACKAGE.md). Fresh-Windows, gameplay quality remain unverified. Model weights and llama.cpp runtime binaries are downloaded separately. Answers can be incorrect: do not treat generated guides or screen readings as verified facts.

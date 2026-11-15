@@ -8,3 +8,5 @@ MIT covers project code, not independently licensed dependencies, weights or ret
 - [Guild Wars 2 wiki](https://wiki.guildwars2.com/wiki/Guild_Wars_2_Wiki:Copyrights) and official API: content and service terms remain separate. No wiki corpus or personal account data is bundled.
 
 Guild Wars 2 and related marks belong to their owners. This is an unofficial community project. The sword icon was AI-generated as an original fantasy/Ascalon-inspired design; it is not an extracted game asset or official logo. No exclusive rights in AI-generated artwork are asserted by the project code license.
+
+- [Tesseract](https://tesseract-ocr.github.io/) and [Qwen GGUF files](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) are external optional components. They are not bundled in this Windows package; follow the selected distribution/model terms.

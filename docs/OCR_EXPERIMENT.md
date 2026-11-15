@@ -1,9 +1,11 @@
-# Experimental OCR and Qwen source mode
+# Experimental OCR and Qwen mode
 
-This source-only feature reads text from an approved game window with Tesseract
+This feature reads text from an approved game window with Tesseract
 and can send that text to a local Qwen 3.5 4B model for reasoning. Gemma 4 12B QAT
 remains the image-vision option. This is application testing and prompt/evidence
-improvement, not model weight training. OCR is excluded from the Windows package.
+improvement, not model weight training. Starting with Windows 0.1.12-alpha, the
+OCR runtime and Settings are included in the executable. Developer recording,
+readings review windows, training adapters and private replay tools stay excluded.
 
 ## Setup
 
@@ -27,7 +29,8 @@ improvement, not model weight training. OCR is excluded from the Windows package
 Stop the engine before changing models or paths. Choose **12B Gemma QAT** to
 return to image vision; its matching projector remains configured in the
 original inference profile. OCR setup is greyed out for Gemma. File paths are
-remembered locally; every new app launch defaults to Gemma with OCR off.
+remembered locally, including the selected model. Capture remains off until
+you explicitly start the engine and approve a window.
 
 ## Behavior and limits
 
@@ -79,3 +82,7 @@ $env:PYTHONPATH = 'src'
 Tests use synthetic data and mocked engines; passing them does not establish
 real-game accuracy, VRAM savings or a performance guarantee. Gameplay and clean
 machine testing are still needed before including OCR in a Windows release.
+
+Production code now lives in `src/waypoint/ocr/`; source experiment imports
+remain compatibility aliases. Packaged first-run setup can select Qwen directly.
+Developer recording and readings-review controls are not shipped.

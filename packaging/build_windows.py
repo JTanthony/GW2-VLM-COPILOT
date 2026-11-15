@@ -6,17 +6,21 @@ sys.path.insert(0,str(ROOT/'src'))
 from waypoint.version import VERSION
 DEV_MODULES=('waypoint.storage.vision_review','waypoint.testing','waypoint.ui.player_setup','waypoint.experiments')
 DEV_PATHS={'tests','fixtures','text-playtests','vision-review','test-catalog','experiments'}
-DEV_FILES={'AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
+DEV_FILES={'DEVELOPMENT.md','TEXT_TESTER.md','OCR_EXPERIMENT.md','SETUP.md','AGENTS.md','run-gw2-vision-training.cmd','run-gw2-wiki-for-training.cmd',
            'run-qwen-gw2-wiki-for-training-no-account.cmd','stop-qwen-gw2-wiki-for-training-no-account.cmd',
            'run-gw2-wiki-for-training-no-account.cmd','stop-gw2-wiki-for-training.cmd',
            'run_text_sessions.py','refresh_gw2_test_catalog.py','refresh_map_achievements.py','benchmark_local.py',
            'playtest_edges.py','playtest_local.py','verify_window_capture.py','compare_vision_inputs.py','refresh_story_achievements.py'}
-def main():
-    build=ROOT/'local-data/package-build'
+def build_app():
+    build=ROOT/('local-data/package-build-v'+VERSION)
     exclusions=[arg for module in DEV_MODULES for arg in ('--exclude-module',module)]
     subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--windowed',*exclusions,'--name','GW2-VLM-COPILOT','--paths',str(ROOT/'src'),'--collect-all','windows_capture','--icon',str(ROOT/'assets/branding/gw2-vlm-copilot.ico'),'--distpath',str(build/'dist'),'--workpath',str(build/'work'),'--specpath',str(build/'spec'),str(ROOT/'tools/run_gui.py')],cwd=ROOT,check=True)
-    return assemble(build/'dist/GW2-VLM-COPILOT')
-def assemble(folder):
+    return build/'dist/GW2-VLM-COPILOT'
+
+def main():
+    return assemble(build_app())
+
+def assemble(folder, portable=True):
     reference=folder/'data/gw2/map_achievements.json'
     reference.parent.mkdir(parents=True,exist_ok=True)
     shutil.copy2(ROOT/'data/gw2/map_achievements.json',reference)
@@ -24,10 +28,12 @@ def assemble(folder):
     for name in ('gw2-vlm-copilot-24.png','gw2-vlm-copilot-32.png','gw2-vlm-copilot.ico'):
         target=folder/'assets/branding'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/branding'/name,target)
     target=folder/'assets/ui/slider-thumb.png';target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'assets/ui/slider-thumb.png',target)
-    for name in ('LICENSE','README.md','requirements.txt'):shutil.copy2(ROOT/name,folder/name)
-    for name in ('Uninstall.cmd','Uninstall.ps1'):shutil.copy2(ROOT/'packaging'/name,folder/name)
+    for name in ('LICENSE','requirements.txt'):shutil.copy2(ROOT/name,folder/name)
+    shutil.copy2(ROOT/'packaging/WINDOWS_README.md',folder/'README.md')
+    if portable:
+        for name in ('Uninstall.cmd','Uninstall.ps1'):shutil.copy2(ROOT/'packaging'/name,folder/name)
     (folder/'Models').mkdir(exist_ok=True)
-    for name in ('WINDOWS_PACKAGE.md','SETUP.md','DEVELOPMENT.md','THIRD_PARTY.md','PRIVACY.md'):
+    for name in ('WINDOWS_PACKAGE.md','THIRD_PARTY.md','PRIVACY.md'):
         target=folder/'docs'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/'docs'/name,target)
     licenses=folder/'THIRD-PARTY-LICENSES';licenses.mkdir(exist_ok=True)
     import importlib.metadata as metadata
@@ -47,6 +53,8 @@ def assemble(folder):
         if any(part in forbidden for part in relative.parts) or path.suffix in ('.gguf','.dpapi','.log') or path.name.endswith('.local.json'):raise RuntimeError('Private artifact in package: '+str(relative))
         manifest.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
     (folder/'PACKAGE-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
+    if not portable:
+        return folder
     output=ROOT/'local-data/releases';output.mkdir(parents=True,exist_ok=True)
     archive=output/f'GW2-VLM-COPILOT-v{VERSION}-windows-x64.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as zipped:

@@ -1,29 +1,61 @@
-# Windows portable alpha
+# Windows alpha — Settings and OCR
 
-Designed for Gemma 4 12B QAT Q4_0. Other llama.cpp-compatible GGUF models may be used; vision requires a compatible model and matching projector. Alternative models are not yet validated. Model weights are downloaded separately, not built into this alpha.
+Version 0.1.12-alpha adds the Settings menu, model selection and a Qwen/Tesseract
+OCR option alongside Gemma vision. The package's top-level README contains the
+user setup guide and download links. Models, llama.cpp and Tesseract are separate
+installations, not bundled downloads. Python is bundled.
 
-Extract the entire ZIP into a writable folder (for example Downloads or Documents), then open GW2-VLM-COPILOT.exe. Keep the _internal and assets folders beside the executable. Python does not need to be installed. This is an unsigned experimental application, not a signed installer.
+Settings is available beside Collapse in both source and packaged runs. The
+selected model, file paths and update preference are saved under the Windows
+user's app data. Qwen uses CPU OCR and text-only reasoning; Gemma uses its selected
+vision companion for image inference. Only one answer model loads at a time.
+Live capture samples every five seconds and requires explicit window approval.
 
-The included Models folder is empty. Put your downloaded model, matching vision companion and extracted llama.cpp server folder there. See the top-level README for download links and CUDA DLL instructions. No model weights or engine binaries are bundled.
+The executable has no developer recording control, OCR readings review window,
+training launchers, test runner or private replay tools. Screenshots/OCR crops
+stay in RAM. Packaged runs reject the developer `--vision-review` argument.
+No model weights, account data, private configuration, logs or recordings ship.
 
-First launch opens local setup. Download a Windows llama.cpp server and required matching DLLs from https://github.com/ggml-org/llama.cpp/releases/tag/b11512, and separately obtain your Gemma 4 12B GGUF and matching vision projector. Select those local files and save. The app does not silently download or execute files in setup. Click Start engine only when ready. Model/runtime files are not included; NVIDIA drivers and appropriate GPU memory are still required. Leaving the projector blank enables text-only configuration.
+## Clean Windows acceptance
 
-Packaged settings, logs and project resources live in %LOCALAPPDATA%/GW2 VLM COPILOT. Saved account keys currently retain the existing %LOCALAPPDATA%/Waypoint/credentials location and Windows user protection. No private state ships in the ZIP. To reconfigure, run GW2-VLM-COPILOT.exe --setup.
+Test with a separate Windows account or VM and no prior app data:
 
-## Clean Windows acceptance checklist
+1. Verify the ZIP hash, extract and launch. Cancel setup: no engine/capture starts.
+2. Try Qwen setup with its own GGUF and an installed Tesseract folder. No Gemma
+   download is required. Confirm English OCR data is required for that choice.
+3. Try Gemma setup with its matching companion. Blank companion permits chat
+   setup, but image inference needs the matching file.
+4. Open Settings, change the model/path after stopping the engine, close/reopen
+   Settings and confirm the update controls remain usable. Restart and confirm
+   the selected model and paths are retained.
+5. Start engine, send a greeting and a wiki question; assess correctness separately
+   from whether a response arrived. Select/approve GW2 and test OCR or vision.
+6. Minimize/restore the game; Pause must stop capture and clear approval. Confirm
+   no screenshots are written. Close the app and check its owned engine exits.
+7. Verify recording, developer readings, test buttons and training launchers are
+   absent. `--vision-review` must be rejected.
+8. Test uninstall choices without deleting source development folders or unrelated
+   model/runtime folders. Downloaded models may be stored outside the app folder.
 
-Use a new Windows account or VM with no Python, models or prior app data:
-1. Verify the ZIP hash, extract it, and launch setup. Cancel: app should exit without inference/capture or configuration.
-2. Relaunch, select verified server/model/projector files, save, and check the app title/icons/chat labels.
-3. Start engine, send an ordinary greeting, and ask a named GW2 wiki question. Check evidence correctness, not just whether a reply arrives.
-4. Optionally connect a newly created GW2 key in Accounts; verify reconnect, refresh and forget. Never include the key in a test report.
-5. With the game restored, explicitly approve capture; test Pause and minimize/restore. Confirm no capture occurs before approval.
-6. Close the app and verify its engine exits. Relaunch and ensure settings persist. Move the extracted folder and confirm no build-machine paths are needed.
+## Setup EXE
 
---check-package checks bundled imports, UI assets and a synthetic Windows-protection round trip, writing package-check.json to per-user app data. --smoke opens/closes the UI without loading a model or capturing. These checks are not substitutes for clean-Windows and real GPU/game acceptance.
+Build with an installed [Inno Setup](https://jrsoftware.org/isdl.php) compiler
+and the same Python environment used for the portable build.
 
-Build contributors: install requirements.txt and PyInstaller 6.22.3 in a dedicated build environment, then run python packaging/build_windows.py. Output goes to ignored local-data/releases. Do not copy development .local.json files, model weights or account stores into the package.
+```powershell
+.\.venv\Scripts\python.exe packaging\build_installer.py --iscc "C:\path\to\ISCC.exe"
+```
 
-## Update notifications
+The build puts the installer and SHA-256 file in `local-data/releases`.
+Setup installs to `%ProgramFiles%\GW2-VLM-COPILOT` and adds a Start menu shortcut.
+Windows Settings provides uninstall. Existing per-user settings and credentials
+stay in their established AppData locations.
 
-The app checks for newer Windows releases, including alpha prereleases, in the background on launch. Use **Download update** to open the GitHub release page, close the app, and follow the README to replace the program files. Models and saved AppData are separate; do not run the uninstaller or delete your saved data when updating. The checker never installs updates automatically. **Check updates on launch** can be turned off, and **Check updates** runs a manual check. Older versions without this checker still require a manual download.
+Test the Setup EXE on a clean Windows VM. Check the shortcut, upgrade in place,
+and verify that the model paths survive. Use dummy GGUFs in the installed
+`Models` folder to test both uninstall choices. Place another dummy file
+outside that folder and confirm it survives either choice.
+
+Automated package checks do not replace real gameplay/GPU testing or acceptance
+on another machine. Never start a second engine merely to test installation while
+another app/test engine is running. Existing engines must not be reused or stopped.
