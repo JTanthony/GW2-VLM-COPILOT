@@ -199,7 +199,37 @@ class ResearchTests(unittest.TestCase):
         client=MagicMock(); client.complete.return_value=json.dumps({'game':'Guild Wars 2','query':'League Slayer—Conquest'})
         with patch('waypoint.assistant.research.lookup',return_value=[]) as fetch:
             research(client,'Research this',[])
-        fetch.assert_called_once_with('Guild Wars 2','League Slayer-Conquest')
+        fetch.assert_called_once_with('Guild Wars 2','League Slayer—Conquest')
+
+    def test_named_playtest_questions_bypass_planner(self):
+        cases = (
+            ('How do I access Sandswept Isles? Do I need to finish the whole episode first?', 'Sandswept Isles'),
+            ('My bags are full. What is Glob of Ectoplasm used for, and should I sell or keep it?', 'Glob of Ectoplasm'),
+            ('How do I complete Lunar Homecoming: Metrica Province, and when is it available?', 'Lunar Homecoming: Metrica Province'),
+            ('I am level 15. Can I participate in Defend the skritt while they steal golem parts, and where would I start?', 'Defend the skritt while they steal golem parts'),
+        )
+        for question, title in cases:
+            with self.subTest(title=title), patch('waypoint.assistant.research.lookup', return_value=[{'title':title}]) as fetch:
+                client = MagicMock()
+                articles, notice = research(client, question, [], selected_game='Guild Wars 2')
+                client.complete.assert_not_called()
+                fetch.assert_called_once_with('Guild Wars 2', title)
+                self.assertEqual(articles[0]['requested_subject'], title)
+                self.assertEqual(notice, '')
+
+    def test_followup_recovers_player_subject_after_first_lookup_misses(self):
+        client = MagicMock()
+        client.complete.return_value = json.dumps({'game':'Guild Wars 2','query':'Unrelated'})
+        history = [{'role':'user','text':'How do I access Sandswept Isles?'},
+                   {'role':'assistant','text':'How do I access another zone?'}]
+        with patch('waypoint.assistant.research.lookup', return_value=[{'text':'Travel'}]) as fetch:
+            research(client, 'What are the prerequisites for this map?', history, selected_game='Guild Wars 2')
+        fetch.assert_called_once_with('Guild Wars 2','Sandswept Isles')
+
+    def test_direct_subject_still_blocks_credential_terms(self):
+        with patch('waypoint.assistant.research.lookup') as fetch:
+            research(MagicMock(), 'What is My API key used for?', [], selected_game='Guild Wars 2')
+        fetch.assert_not_called()
 
     def test_map_followup_preserves_established_subject(self):
         from types import SimpleNamespace

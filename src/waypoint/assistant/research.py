@@ -1,8 +1,9 @@
 """Local model plans a bounded game lookup; only validated search terms leave the PC."""
 import json,re
 from .routing import is_social_message,is_research_request
-from .web_lookup import SOURCES,lookup,gw2_topic,ascended_topic,named_subject,WikiMaintenanceError,MAINTENANCE_NOTICE,WikiAPIError
+from .web_lookup import SOURCES,lookup,gw2_topic,named_subject,WikiMaintenanceError,MAINTENANCE_NOTICE,WikiAPIError
 from waypoint.integrations.story_achievements import selected_story
+from waypoint.storage.resources import sensitive
 
 PLAN_SCHEMA={'type':'object','properties':{
     'game':{'type':'string','enum':['none',*SOURCES]},
@@ -40,19 +41,15 @@ def research(client,question,history,observation=None,window_title='',progress=N
     stage='local lookup planning'
     try:
         if progress: progress('Considering game references\u2026')
-        # A verified, explicitly named GW2 adventure does not need model planning.
-        direct_equipment=(ascended_topic(question) if 'Guild Wars 2' in sources and
-                          (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(gw2|guild wars 2)\b',question)) else None)
-        direct_topic=('Guild Wars 2' in sources and gw2_topic(question)
-                       and (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(gw2|guild wars 2|verdant brink)\b',question)))
-        plan=({'game':'Guild Wars 2','query':direct_equipment} if direct_equipment else
-              {'game':'Guild Wars 2','query':gw2_topic(question)} if direct_topic else
+        gw2_context = 'Guild Wars 2' in sources and (
+            selected_game == 'Guild Wars 2' or re.search(r'(?i)\b(gw2|guild wars 2|verdant brink)\b', question)
+        )
+        supplied = named_subject(question) if gw2_context else None
+        direct = (gw2_topic(question) or supplied) if gw2_context else None
+        plan=({'game':'Guild Wars 2','query':direct} if direct else
               {'game':'Blish HUD','query':'API integration'} if 'Blish HUD' in sources and re.search(r'(?i)\b(blish\s*hud|bishhud)\b',question)
               else json.loads(client.complete(prompt,schema=schema,max_tokens=128)))
         game=plan.get('game'); query=plan.get('query')
-        supplied=named_subject(question)
-        if supplied and 'Guild Wars 2' in sources and (selected_game=='Guild Wars 2' or re.search(r'(?i)\b(?:guild wars 2|gw2)\b',question)):
-            game,query='Guild Wars 2',supplied
         # Standalone requests for steps/requirements must keep their established subject.
         if previous_topic and re.fullmatch(r'(?is)\s*(?:what (?:are |is )?(?:the )?(?:specific )?(?:requirements|next step|first step|starting point)|can you give me (?:one |a )?(?:concrete )?next step|is there a specific sequence).*',question) and not re.search(r'(?i)\b(?:for|about|called|named)\s+\w+',question):
             game,query=previous_topic['game'],previous_topic['query']
@@ -60,13 +57,22 @@ def research(client,question,history,observation=None,window_title='',progress=N
         # drifts to a related article. Explicit new names still take precedence.
         unnamed=re.search(r'(?i)what kind of map completion|what are the primary objectives for completing the map|\b(?:this|that|the) (?:achievement|event|mastery|track|plan|time constraint|map|zone|encounter)\b|\b(?:it|its)\b',question)
         explicit=re.search(r'(?i)\b(?:for|about|called|named)\s+(?!this\b|that\b|the\b|it\b)\w+',question)
-        if previous_topic and unnamed and not supplied and not explicit and not gw2_topic(question) and not question.startswith('My original request is:'):
-            game,query=previous_topic['game'],previous_topic['query']
+        if unnamed and not supplied and not explicit and not direct and not question.startswith('My original request is:'):
+            if previous_topic:
+                game,query=previous_topic['game'],previous_topic['query']
+            elif gw2_context:
+                # A missed first lookup leaves no cached topic. Recover only a
+                # named subject from a prior player turn, never assistant claims.
+                subject = next((name for item in reversed(history)
+                                if item.get('role') == 'user'
+                                and (name := named_subject(item.get('text', '')))), None)
+                if subject:
+                    game,query='Guild Wars 2',subject
         # The current question takes precedence; only use the latest established
         # user topic when the follow-up has no known named topic of its own.
         if game=='Guild Wars 2':
             topic=gw2_topic(question)
-            if not topic and re.search(r'(?i)\b(it|that|this|there|requirements|next step|which waypoint)\b',question):
+            if not topic and not supplied and re.search(r'(?i)\b(it|that|this|there|requirements|next step|which waypoint)\b',question):
                 topic=next((gw2_topic(item.get('text','')) for item in reversed(history) if item.get('role')=='user' and gw2_topic(item.get('text',''))),None)
             if topic: query=topic
         if game=='none' and is_research_request(question):
@@ -81,11 +87,11 @@ def research(client,question,history,observation=None,window_title='',progress=N
         stage='search term validation'
         # A colon in an achievement title is ordinary punctuation, not an address.
         if '://' in query: raise ValueError('URLs are not search terms.')
-        query=query.translate(str.maketrans({'—':'-','–':'-','’':"'",'‘':"'",'“':'','”':''})).replace(':',' ').strip()
+        query=query.translate(str.maketrans({'’':"'",'‘':"'",'“':'','”':''})).strip()
         # Block URLs, paths, e-mail and credential-like punctuation even if generated by the model.
-        if not re.fullmatch(r"[\w '\-(),?!]+",query,flags=re.UNICODE):
+        if not re.fullmatch(r"[\w '\-–—(),?!:]+",query,flags=re.UNICODE):
             raise ValueError('Search terms failed validation.')
-        if re.search(r'(?i)\b(password|secret|api[_ ]?key|access[_ ]?token)\b',query):
+        if sensitive(query) or re.search(r'(?i)\bsecret\b',query):
             raise ValueError('Private search terms blocked.')
         if progress: progress('Looking up '+game+' references\u2026')
         stage='wiki retrieval'

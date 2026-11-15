@@ -75,6 +75,8 @@ def next_question(player,prompt,dialogue,turn):
             note='Player model question was malformed; used a controlled follow-up'
         elif str(exc)=='Generated question used the helper role instead of the player role.':
             note='Player model used the helper role; used a controlled follow-up'
+        elif str(exc)=='Generated question failed privacy or length checks.':
+            note='Player question failed validation; discarded it and used a controlled follow-up'
         else: raise
     if note:
         options=('What requirements should I check before starting the option you suggested?',
@@ -83,8 +85,12 @@ def next_question(player,prompt,dialogue,turn):
                  'What important detail is missing before you can give me a reliable guide?')
         question=options[(turn-1)%len(options)]
         original=context.get('original_player_question','')
-        if original:
-            question='My original request is: '+original[:300]+' '+question
+        if isinstance(original,str) and original:
+            try:
+                question=validate_question('My original request is: '+original[:300]+' '+question)
+            except ValueError:
+                pass  # Keep the generic follow-up if the scenario text is unsafe.
+        question=validate_question(question)
     return question,note
 
 def scenarios(accounts):

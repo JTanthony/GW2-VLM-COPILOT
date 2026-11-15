@@ -71,12 +71,17 @@ def named_subject(question):
     """Extract an explicitly supplied task name, not a guessed location."""
     patterns=(r'(?i)\bmedal (?:in|for)\s+(.+?)(?=\s+(?:offers?|gives?|provides?|affects?|impacts?|yields?)\b|[?.]|$)',
               r'(?i)(?:whether it is still available|what it does|its encounter instead|active now|how to progress it):\s*(.+?)(?=\s*\(track:|\.\s*(?:Research|Tell me)|$)',
+              r'(?i:\b(?:how (?:do|can) I (?:access|reach|complete)|can I participate in))\s+([A-Z][^?.!,]*)',
+              r'(?i:\bwhat is)\s+([A-Z][^?.!,]*?)\s+(?i:used for)\b',
+              r'(?i:\b(?:exploring|achievements? (?:in|for)))\s+([A-Z][\w’\'-]*(?: [A-Z][\w’\'-]*)+)(?=\s+(?:and|achievements?)\b|[?.!,]|$)',
               r'(?i)\b(?:achievement|mastery|event)\s+(?:called|named)\s+["“]?([^"”?.]+)')
     for pattern in patterns:
         match=re.search(pattern,question)
         if match:
             subject=match.group(1).strip(' ."')
-            if 1<=len(subject)<=120: return subject
+            if (1 <= len(subject) <= 120
+                    and not re.match(r'(?i)(?:the|this|that|these|those|it|them)\b', subject)):
+                return subject
     return None
 
 def wants_sources(question):
@@ -271,7 +276,8 @@ def lookup(game,query):
             'gsrlimit':2,'prop':'extracts','explaintext':1,'exchars':6000,'formatversion':2}
     topic=gw2_topic(query) if game=='Guild Wars 2' else None
     subject=exact_subject(query)
-    regional={**dict.fromkeys(('Turtle Mount','Fishing','Arborstone Revitalization','Jade Bots','Skiff Piloting'),'End of Dragons mastery tracks'),
+    regional={'Fractal Attunement':'Central Tyria mastery tracks',
+              **dict.fromkeys(('Turtle Mount','Fishing','Arborstone Revitalization','Jade Bots','Skiff Piloting'),'End of Dragons mastery tracks'),
               **dict.fromkeys(('Gliding','Itzel Lore','Exalted Lore','Nuhoch Lore','Raids'),'Heart of Thorns mastery tracks'),
               **dict.fromkeys(('Raptor Mount','Springer Mount','Skimmer Mount','Jackal Mount','Griffon Mount','Roller Beetle Mount','Skyscale Mount','Crystal Champion'),'Path of Fire mastery tracks'),
               'Warclaw Mount':'Janthir Wilds mastery tracks'}
@@ -286,7 +292,7 @@ def lookup(game,query):
         result={'query':{'pages':[{'title':title} for title in titles]}}
     elif game=='Guild Wars 2':
         exact=wiki_json(host,api,{'action':'query','format':'json','formatversion':2,'titles':subject,'redirects':1})
-        pages=[p for p in exact.get('query',{}).get('pages',[]) if isinstance(p,dict) and 'missing' not in p and 'invalid' not in p and isinstance(p.get('pageid'),int)]
+        pages=[p for p in exact.get('query',{}).get('pages',[]) if isinstance(p,dict) and p.get('ns',0)==0 and 'missing' not in p and 'invalid' not in p and isinstance(p.get('pageid'),int)]
         if pages: result={'query':{'pages':pages[:1]}}
         else:
             result=wiki_json(host,api,params)

@@ -94,6 +94,29 @@ class TextSessionTests(unittest.TestCase):
             summary=run_sessions(player,lambda session:helper,Accounts(),directory,sessions=100,turns=6,delay=0)
         self.assertEqual(summary['errors'],3); self.assertEqual(summary['stop_reason'],'repeated errors')
 
+    def test_rejected_questions_are_replaced_without_ending_run(self):
+        rejected=['Synthetic password marker', 'X'*501, None]
+        player=MagicMock()
+        player.complete.side_effect=[json.dumps({'question': question}) for question in rejected]
+        assistant=MagicMock(); assistant.chat.return_value='Check the requirements first.'
+        with tempfile.TemporaryDirectory() as directory:
+            out=Path(directory)/'run'
+            summary=run_sessions(player,lambda session:assistant,Accounts(),out,sessions=1,turns=4,delay=0,
+                                 plans=[{'name':'test','game':'Guild Wars 2','starter':'Help me complete Dug In.'}])
+            records=(out/'conversations.jsonl').read_text(encoding='utf-8')
+            self.assertEqual(summary['cases'],4); self.assertEqual(summary['errors'],0)
+            self.assertEqual(summary['stop_reason'],'session limit')
+            self.assertNotIn(rejected[0],records); self.assertNotIn(rejected[1],records)
+            for call in assistant.chat.call_args_list[1:]:
+                self.assertIn('Dug In',validate_question(call.args[0]))
+
+    def test_invalid_scenario_prefix_uses_generic_validated_fallback(self):
+        player=MagicMock(); player.complete.return_value='{"question":null}'
+        prompt=json.dumps({'original_player_question':'Synthetic password marker'})
+        question,_=next_question(player,prompt,[],2)
+        self.assertEqual(question,validate_question(question))
+        self.assertNotIn('password',question)
+
 class UnquotedTopicTests(unittest.TestCase):
     def test_unquoted_invented_zone_uses_controlled_followup(self):
         from unittest.mock import MagicMock
