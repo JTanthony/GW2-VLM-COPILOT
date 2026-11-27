@@ -39,13 +39,14 @@ def launch():
         if handle: kernel.CloseHandle(handle)
 
 def check_package():
-    import json,tkinter as tk
+    import json,ssl,tkinter as tk
     from waypoint.paths import app_root
     from waypoint.integrations.credentials import protect
     import numpy,cv2,windows_capture
     from waypoint.ocr.reader import OCRReader
     from waypoint.ocr.qwen import OCRAssistant,TextOnlyClient
     from waypoint.ocr.nearby import NearbyGate
+    ssl.create_default_context()
     if getattr(sys,'frozen',False):
         import importlib.util
         for module in ('waypoint.experiments','waypoint.testing','waypoint.storage.vision_review','waypoint.ui.player_setup'):

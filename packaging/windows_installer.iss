@@ -26,6 +26,9 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 Name: "{commonprograms}\GW2 VLM COPILOT"; Filename: "{app}\GW2-VLM-COPILOT.exe"; WorkingDir: "{app}"
 Name: "{commondesktop}\GW2 VLM COPILOT"; Filename: "{app}\GW2-VLM-COPILOT.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
+[Run]
+Filename: "{app}\GW2-VLM-COPILOT.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "Open resource setup (download server, NVIDIA DLLs, and models)"; Flags: postinstall nowait skipifsilent runasoriginaluser
+
 [Code]
 const
   DirectoryAttribute = $10;
@@ -45,12 +48,23 @@ begin
 end;
 
 function SafeCleanupFolder(Folder: String): Boolean;
+var
+  UserData: String;
 begin
-  Result := (CompareText(ExpandConstant('{app}'),
-    ExpandConstant('{autopf}\GW2-VLM-COPILOT')) = 0) and
-    PlainDirectory(ExpandConstant('{autopf}')) and
-    PlainDirectory(ExpandConstant('{app}')) and
-    PlainDirectory(Folder);
+  Result := False;
+  if CompareText(ExpandConstant('{app}'), ExpandConstant('{autopf}\GW2-VLM-COPILOT')) <> 0 then
+    Exit;
+  if (CompareText(Folder, ExpandConstant('{app}\Models')) = 0) or
+     (CompareText(Folder, ExpandConstant('{app}\runtime')) = 0) then
+    Result := PlainDirectory(ExpandConstant('{autopf}')) and
+      PlainDirectory(ExpandConstant('{app}')) and PlainDirectory(Folder);
+  UserData := ExpandConstant('{localappdata}\GW2 VLM COPILOT');
+  if CompareText(Folder, UserData + '\Models') = 0 then
+    Result := PlainDirectory(ExpandConstant('{localappdata}')) and
+      PlainDirectory(UserData) and PlainDirectory(Folder);
+  if CompareText(Folder, UserData + '\runtime\llama-b12387') = 0 then
+    Result := PlainDirectory(ExpandConstant('{localappdata}')) and
+      PlainDirectory(UserData) and PlainDirectory(UserData + '\runtime') and PlainDirectory(Folder);
 end;
 
 function ConfirmCleanup(Files: TStringList; TotalBytes: Int64; Folder, ItemLabel: String): Boolean;
@@ -169,4 +183,6 @@ begin
     Exit;
   OfferCleanup(ExpandConstant('{app}\Models'), 'models', False);
   OfferCleanup(ExpandConstant('{app}\runtime'), 'runtime', True);
+  OfferCleanup(ExpandConstant('{localappdata}\GW2 VLM COPILOT\Models'), 'models', False);
+  OfferCleanup(ExpandConstant('{localappdata}\GW2 VLM COPILOT\runtime\llama-b12387'), 'runtime', True);
 end;

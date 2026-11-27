@@ -8,16 +8,19 @@ user-approved screen assistance. Answers can be wrong. OCR/vision are experiment
 1. Run the Setup EXE, approve the Windows administrator prompt, and open
    **GW2 VLM COPILOT** from Start. For the portable ZIP, extract everything
    and open `GW2-VLM-COPILOT.exe` in the extracted folder. Python is bundled.
-2. Download a compatible Windows x64 llama.cpp server from the
-   [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases).
-   For an NVIDIA GPU, choose the matching CUDA build and runtime DLL archive.
-   Extract their contents together so the DLLs sit beside `llama-server.exe`.
-   Keep the full server folder, not just the EXE.
-3. Choose a model below and save its files in a folder you control, such as
-   `Models` inside the extracted portable folder. Model weights and llama.cpp
-   are separate downloads.
-4. In first-time setup choose **4B Qwen (OCR)** or **12B Gemma QAT (vision)**,
-   then select your server and files. Click **Save and open app**.
+2. In first-time Setup choose **4B Qwen (OCR)** or **12B Gemma QAT (vision)**.
+   On **Downloads**, select the server, NVIDIA DLLs and desired model files,
+   then click **Download selected**. Each row shows download, verification and
+   extraction progress. Cancelled downloads can resume on another attempt.
+3. Automatic downloads use `%LOCALAPPDATA%\GW2 VLM COPILOT\runtime\llama-b12387`
+   for the server/DLLs and `%LOCALAPPDATA%\GW2 VLM COPILOT\Models` for model files.
+   In source development, those folders are under the source project.
+   The included server downloads target NVIDIA GPUs. Other compatible servers
+   and existing models can be selected in **File locations**.
+4. Completed downloads fill the matching file paths automatically. Qwen also
+   needs a separate [Tesseract OCR installation](https://github.com/UB-Mannheim/tesseract/wiki)
+   with English data. Choose that installation folder in **File locations**.
+   Click **Save and open app**.
 5. Click **Start engine**. Try ordinary chat first. For screen help, select
    the game window and approve capture. Keep it restored; minimizing pauses it.
 
@@ -65,8 +68,9 @@ Close other copilot engines before starting. If needed, open
 `GW2-VLM-COPILOT.exe --setup` to reconfigure.
 
 For an installed copy, use **Settings → Apps → Installed apps → GW2 VLM
-COPILOT → Uninstall**. If you put GGUF files directly in the installed app's
-`Models` folder, you can preview and delete those files during uninstall.
+COPILOT → Uninstall**. You can preview and delete GGUF files in the app's
+`Models` folders and server/DLL files in its runtime folders during uninstall,
+including the current Windows user's automatically downloaded resources.
 Keeping them is the default. Saved user data and separately stored models and
 runtimes stay in place. For a portable copy, use the supplied `Uninstall.cmd`.
 

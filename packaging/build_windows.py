@@ -1,5 +1,5 @@
 """Reproducible portable Windows build; never include local account data or models."""
-import subprocess,sys,shutil,json,hashlib,zipfile
+import subprocess,sys,shutil,json,hashlib,zipfile,ssl,os
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
@@ -14,6 +14,10 @@ DEV_FILES={'DEVELOPMENT.md','TEXT_TESTER.md','OCR_EXPERIMENT.md','SETUP.md','AGE
 def build_app():
     build=ROOT/('local-data/package-build-v'+VERSION)
     exclusions=[arg for module in DEV_MODULES for arg in ('--exclude-module',module)]
+    # Preserve the build interpreter's TLS policy data when freezing ssl.py.
+    tls_data=Path(ssl.__file__).with_name('codex-rejected-cas.pem')
+    if tls_data.is_file():
+        exclusions.extend(['--add-data',str(tls_data)+os.pathsep+'.'])
     subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--windowed',*exclusions,'--name','GW2-VLM-COPILOT','--paths',str(ROOT/'src'),'--collect-all','windows_capture','--icon',str(ROOT/'assets/branding/gw2-vlm-copilot.ico'),'--distpath',str(build/'dist'),'--workpath',str(build/'work'),'--specpath',str(build/'spec'),str(ROOT/'tools/run_gui.py')],cwd=ROOT,check=True)
     return build/'dist/GW2-VLM-COPILOT'
 
