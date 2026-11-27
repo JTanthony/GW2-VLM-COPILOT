@@ -10,6 +10,44 @@ def snapshot(done=False):return {'fetched_at':NOW.isoformat(),'records':[{'id':3
 def observation():return {'visible_text':['OCR upper right: Facing the Truth','OCR upper left: Wedge Symbol! Hollow,','OCR upper right: wedge symbols: 0/5']}
 
 class NearbyTests(unittest.TestCase):
+    def test_iberu_needs_chapter_target_and_objective_before_later_story_steps(self):
+        lines=['Enemy of My Enemy','Archon Iberu','Intercept Archon Iberu at the outskirts of']
+        obs={'visible_text':['OCR upper right: '+line for line in lines]}
+        for rule in ('iberu-drain','iberu-timed'):
+            self.assertTrue(matches(rule,obs))
+            for changed in (lines[:1],lines[1:],[lines[0],lines[2]],
+                            [lines[0],'Awakened Archon Iberu',lines[2]],
+                            lines+['Infiltrate the Bone Palace.'],
+                            [lines[0],lines[1],'[uncertain] '+lines[2]]):
+                self.assertFalse(matches(rule,{'visible_text':['OCR upper right: '+line for line in changed]}))
+            for done,expected in ((False,rule),(True,None)):
+                gate=NearbyGate()
+                snap={'fetched_at':NOW.isoformat(),'records':[{'id':RULES[rule]['id'],'done':done}]}
+                self.assertIsNone(gate.consider(obs,100,snap,NOW,102))
+                self.assertEqual(gate.consider(obs,107,snap,NOW,109),expected)
+
+    def test_iberu_short_memory_requires_two_current_signals_and_clears_at_palace(self):
+        snap={'fetched_at':NOW.isoformat(),'records':[{'id':3698,'done':False}]}
+        complete={'visible_text':['OCR upper right: '+line for line in
+            ['Enemy of My Enemy','Archon Iberu','Intercept Archon Iberu at the outskirts of']]}
+        partial={'visible_text':['OCR upper right: Enemy of My Enemy',
+                               'OCR upper right: Intercept Archon Iberu at the outskirts of']}
+        gate=NearbyGate()
+        self.assertIsNone(gate.consider(complete,100,snap,NOW,102))
+        self.assertEqual(gate.consider(partial,107,snap,NOW,109),'iberu-drain')
+        self.assertIn('Clogged Drain',gate.deliver('iberu-drain',True,partial,107,snap,NOW,110))
+        for later,stamp in (({'visible_text':['OCR upper right: Infiltrate the Bone Palace.']},107),
+                            ({'visible_text':['OCR upper right: Enemy of My Enemy']},107),
+                            (partial,125)):
+            gate=NearbyGate()
+            gate.consider(complete,100,snap,NOW,102)
+            self.assertIsNone(gate.consider(later,stamp,snap,NOW,stamp+2))
+        gate=NearbyGate()
+        gate.consider(complete,100,snap,NOW,102)
+        gate.consider(partial,107,snap,NOW,109)
+        self.assertIsNone(gate.deliver('iberu-drain',True,{'visible_text':[
+            'OCR upper right: Infiltrate the Bone Palace.']},112,snap,NOW,114))
+
     def test_ui_map_intro_reads_ocr_and_respects_hints_switch(self):
         from waypoint.ui.app import App
         from waypoint.assistant.achievement_intro import AchievementIntro

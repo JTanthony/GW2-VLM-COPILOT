@@ -1,5 +1,5 @@
 """Tesseract CPU OCR through memory pipes, never temporary screenshots."""
-import csv,io,os,subprocess,re
+import csv,io,os,subprocess,re,hashlib
 from pathlib import Path
 import cv2
 import numpy as np
@@ -79,6 +79,7 @@ class OCRReader:
         if not (path.parent/'tessdata/eng.traineddata').is_file():
             raise ValueError('English OCR data is missing from the tessdata folder beside tesseract.exe.')
         self.executable=str(path)
+        self.region_cache={}
 
     def observe(self,png):
         pixels=cv2.imdecode(np.frombuffer(png,dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
@@ -86,30 +87,41 @@ class OCRReader:
         h,w=pixels.shape
         if w<32 or h<32 or w*h>16_000_000: raise ValueError('Unsupported OCR frame dimensions.')
         pixels=mask_excluded(pixels)
-        visible=[];seen=set()
+        visible=[];seen=set();reused=0
+        cache=getattr(self,'region_cache',{})
+        self.region_cache=cache
         for label,(left,top,right,bottom) in REGIONS.items():
             crop=pixels[int(top*h):max(1,int(bottom*h)),int(left*w):max(1,int(right*w))]
-            # Enlarge small UI letters before segmentation. Bound the large
-            # center crop separately so it cannot allocate an unbounded image.
-            scale=min(2.0,(4_000_000/crop.size)**.5)
-            if scale>1:
-                crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
-            ok,encoded=cv2.imencode('.png',crop)
-            if not ok: raise ValueError('Could not prepare OCR pixels.')
-            # Explicit executable and fixed arguments; no shell or screen text in commands.
-            result=subprocess.run([self.executable,'stdin','stdout','--tessdata-dir',
-                str(Path(self.executable).parent/'tessdata'),'-l','eng','--psm','11','tsv'],
-                input=encoded.tobytes(),capture_output=True,timeout=4,check=False,
-                env={**os.environ,'OMP_THREAD_LIMIT':'2'},
-                creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-            if result.returncode: raise RuntimeError('OCR engine failed; check the local installation.')
-            lines=text_lines(result.stdout.decode('utf-8',errors='replace'))
+            signature=(crop.shape,hashlib.sha256(crop.tobytes()).digest())
+            cached=cache.get(label)
+            if cached and cached[0]==signature:
+                lines=cached[1]
+                reused+=1
+            else:
+                lines=self.read_region(crop)
+                cache[label]=(signature,lines)
             for line in lines[:LINE_LIMITS[label]]:
                 if line.casefold() in seen: continue
                 seen.add(line.casefold());visible.append('OCR '+label+': '+line)
-        # Recognized text is not proof of location, tracker color, story entry,
-        # event identity, currency denomination, or achievement completion.
         return dict(map=None,event=None,objective=None,timer=None,player_status=None,
-                    visible_text=visible,warnings=[],
+                    visible_text=visible,warnings=[],ocr_regions_processed=len(REGIONS)-reused,
+                    ocr_regions_reused=reused,
                     summary='Experimental OCR across the window excluding chat and skill bar; meaning unconfirmed.',
                     confidence=0.0,needs_reasoning=False)
+
+    def read_region(self,crop):
+        # Enlarge small UI letters before segmentation. Bound the large
+        # center crop separately so it cannot allocate an unbounded image.
+        scale=min(2.0,(4_000_000/crop.size)**.5)
+        if scale>1:
+            crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+        ok,encoded=cv2.imencode('.png',crop)
+        if not ok: raise ValueError('Could not prepare OCR pixels.')
+        # Explicit executable and fixed arguments; no shell or screen text in commands.
+        result=subprocess.run([self.executable,'stdin','stdout','--tessdata-dir',
+            str(Path(self.executable).parent/'tessdata'),'-l','eng','--psm','11','tsv'],
+            input=encoded.tobytes(),capture_output=True,timeout=4,check=False,
+            env={**os.environ,'OMP_THREAD_LIMIT':'2'},
+            creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        if result.returncode: raise RuntimeError('OCR engine failed; check the local installation.')
+        return text_lines(result.stdout.decode('utf-8',errors='replace'))

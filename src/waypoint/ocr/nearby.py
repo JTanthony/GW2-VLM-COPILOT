@@ -3,6 +3,14 @@ import json,re,math
 from datetime import datetime,timezone
 
 RULES={
+    'iberu-drain':dict(id=3698,name='Clogged Drain',
+        source='https://wiki.guildwars2.com/wiki/Enemy_of_My_Enemy#Achievements',
+        fact='Clogged Drain requires defeating Archon Iberu without allowing his drain during Enemy of My Enemy. The prerequisite is The Departing. His target must be defeated to stop the drain; the breakbar cannot interrupt it. OCR cannot establish instance entry, eligibility, or whether a drain has already occurred.',
+        tip='The Enemy of My Enemy tracker and Iberu encounter text were detected. Your saved progress lists Clogged Drain as unfinished. If you are preparing for this story encounter after completing The Departing, review its no-drain requirement before starting: stop his drain by defeating its marked Awakened target. Check the achievement eligibility effect; OCR cannot confirm this attempt still qualifies.'),
+    'iberu-timed':dict(id=3890,name='Iberu, We Hardly Knew You',
+        source='https://wiki.guildwars2.com/wiki/Enemy_of_My_Enemy#Achievements',
+        fact='Iberu, We Hardly Knew You requires defeating Archon Iberu in under two minutes in Enemy of My Enemy, after The Departing. OCR cannot establish the start time, current eligibility, or instance entry.',
+        tip='The Enemy of My Enemy tracker and Iberu encounter text were detected. Your saved progress lists Iberu, We Hardly Knew You as unfinished. If you are preparing for this story encounter after completing The Departing, it requires defeating Iberu in under two minutes. Check its eligibility effect before committing to the attempt; OCR cannot tell when your timer started.'),
     'lohrashi-dive':dict(id=3658,name='Elon River Dive Master',
         source='https://wiki.guildwars2.com/wiki/Elon_River_Dive_Master',
         fact='Elon River Dive Master includes the Southern Vulture Drifts Spire diving location. Its goggles are on the peak east of the Lohrashi the Mournful hero challenge. Reaching them requires a Skimmer and a Springer. The hero challenge is a nearby landmark, not the achievement objective.',
@@ -57,8 +65,25 @@ def jimoh_lines(lines):
         re.fullmatch(r'Elonian Defectors Alive:\s*(?:[0-9]|10)',line,re.I) for line in lines)
     return npc and escort
 
+def iberu_signal(line):
+    if line.casefold()=='enemy of my enemy':return 'chapter'
+    if line.casefold()=='archon iberu':return 'target'
+    if re.fullmatch(
+        r'(?:Intercept|Defeat) Archon Iberu(?: at the outskirts(?: of(?: the Bone Palace)?)?)?[.!]?',
+        line,re.I):return 'objective'
+    return None
+
+def iberu_later(lines):
+    return any(re.fullmatch(r'(?:Infiltrate the Bone Palace|Deceive Grand Vizier Utumishi|Speak with your team in private)[.!]?',line,re.I)
+               for line in lines)
+
+def iberu_lines(lines):
+    return not iberu_later(lines) and {'chapter','target','objective'}<={iberu_signal(line) for line in lines}
+
 def matches(rule,observation):
     lines=clean_lines(observation)
+    if rule in ('iberu-drain','iberu-timed'):
+        return iberu_lines(lines)
     if rule=='lohrashi-dive':
         return (any(re.fullmatch(r'(?:Lohrashi the Mournful|Defeat Lohrashi the(?: Mournful)?)[.!]?',line,re.I) for line in lines) and
                 any(re.fullmatch(r'Time limit:?\s*(?:\d{1,2}:\d{2})?',line,re.I) for line in lines))
@@ -79,7 +104,11 @@ def matches(rule,observation):
 def supporting_lines(rule,observation):
     selected=[]
     for line in clean_lines(observation):
-        if rule=='lohrashi-dive' and (re.fullmatch(r'(?:Defeat )?Lohrashi the(?: Mournful)?[.!]?',line,re.I) or
+        if rule in ('iberu-drain','iberu-timed') and (
+            line.casefold()=='enemy of my enemy' or line.casefold()=='archon iberu' or
+            re.fullmatch(r'(?:Intercept|Defeat) Archon Iberu(?: at the outskirts(?: of(?: the Bone Palace)?)?)?[.!]?',line,re.I)):
+            selected.append(line)
+        elif rule=='lohrashi-dive' and (re.fullmatch(r'(?:Defeat )?Lohrashi the(?: Mournful)?[.!]?',line,re.I) or
             re.fullmatch(r'Time limit:?\s*(?:\d{1,2}:\d{2})?',line,re.I)):selected.append(line)
         elif rule=='forgotten-teleporter' and re.fullmatch(r'Forgotten Teleporter[.!]?',line,re.I):selected.append(line)
         elif rule=='dwarven-chest' and line.casefold()=='lost dwarven chest':selected.append(line)
@@ -111,12 +140,25 @@ class NearbyGate:
     def __init__(self):
         self.previous=None;self.passes=0;self.seen_stamp=None;self.sent=False
         self.attempted=set();self.pending=None;self.reason='Waiting for verified nearby OCR'
-        self.augury={};self.pending_evidence=None;self.audit=None
+        self.augury={};self.iberu={};self.pending_evidence=None;self.audit=None
     def evidence(self,observation,stamp,clock):
-        # Only two exact public signal lines are retained, for at most 20 seconds.
+        # Only exact public signal lines are retained, for at most 20 seconds.
         # A cached line alone cannot create another confirming pass.
         self.augury={key:value for key,value in self.augury.items() if 0<=clock-value[0]<=20}
         lines=clean_lines(observation)
+        self.iberu={key:value for key,value in self.iberu.items() if 0<=clock-value[0]<=20}
+        current_iberu={iberu_signal(line) for line in lines}-{None}
+        if iberu_later(lines):
+            self.iberu.clear()
+        else:
+            for line in lines:
+                signal=iberu_signal(line)
+                if signal:self.iberu[signal]=(stamp,line)
+            # Two current signals keep the reminder tied to this encounter.
+            if len(current_iberu)>=2:
+                observation={**observation,'visible_text':observation.get('visible_text',[])+[
+                    'OCR upper right: '+line for saved,line in self.iberu.values()],
+                    'evidence_note':'Exact Iberu signals from current/recent OCR, at most 20 seconds old; two signals are current.'}
         if augury_closed(lines):
             self.augury.clear()
             return observation
@@ -131,10 +173,10 @@ class NearbyGate:
     def consider(self,observation,stamp,snapshot,now,clock):
         if self.sent or self.pending:return None
         if not isinstance(stamp,(int,float)) or not math.isfinite(stamp) or not 0<=clock-stamp<=15:
-            self.previous=None;self.passes=0;self.augury.clear();self.reason='Waiting for fresh OCR';return None
+            self.previous=None;self.passes=0;self.augury.clear();self.iberu.clear();self.reason='Waiting for fresh OCR';return None
         if stamp==self.seen_stamp:return None
         if self.seen_stamp is not None and not 0<stamp-self.seen_stamp<=20:
-            self.previous=None;self.passes=0;self.augury.clear()
+            self.previous=None;self.passes=0;self.augury.clear();self.iberu.clear()
         self.seen_stamp=stamp
         observation=self.evidence(observation,stamp,clock)
         self.audit={'rules':[{'rule':key,'matched':matches(key,observation),
@@ -172,6 +214,7 @@ def verify(client,rule,observation,snapshot,now):
         'For dwarven-chest, the exact Lost Dwarven Chest object label supports notify=true. '
         'For lohrashi-dive, the exact Lohrashi target name or Defeat Lohrashi objective together with an active Time limit label supports a nearby diving-location reminder. The objective can wrap after the word the. This does not establish hero-challenge or diving credit. '
         'For forgotten-teleporter, the exact Forgotten Teleporter object label supports a reminder about using functioning teleporters; it does not establish individual credit. '
+        'For either iberu rule, Enemy of My Enemy plus the exact Archon Iberu name and its Intercept or Defeat objective supports a conditional story-achievement reminder. The app may combine exact lines within 20 seconds when at least two signals are current. It does not confirm current eligibility or story-instance entry. Later Bone Palace objectives suppress this reminder. '
         'For wedge-puzzle, Wedge Symbol Hollow plus a valid incomplete wedge symbols x/5 counter supports notify=true. '
         'For either jimoh rule, the clean Jimoh NPC/escort name together with the active defector escort text or counter supports notify=true. This does not confirm prerequisites or ten-defector eligibility. '
         'For augury-verses, exact opening text and a nearby Forgotten Light or numbered Flame Seeker Verse label support notify=true. The app can combine these exact signals within 20 seconds; a map-wide status alone or a watched achievement title is insufficient. '

@@ -109,6 +109,37 @@ class OCRTests(unittest.TestCase):
             with self.assertRaises(subprocess.TimeoutExpired): reader.observe(png)
         with self.assertRaises(ValueError): reader.observe(b'invalid')
 
+    def test_static_regions_reuse_text_but_one_changed_pixel_refreshes_region(self):
+        reader=OCRReader.__new__(OCRReader);reader.executable='C:/OCR/tesseract.exe'
+        pixels=np.zeros((100,200),dtype=np.uint8)
+        encode=lambda:cv2.imencode('.png',pixels)[1].tobytes()
+        with patch('waypoint.ocr.reader.subprocess.run',return_value=MagicMock(returncode=0,stdout=TSV.encode())) as run:
+            first=reader.observe(encode())
+            repeat=reader.observe(encode())
+            self.assertEqual(run.call_count,4)
+            self.assertEqual(first['visible_text'],repeat['visible_text'])
+            self.assertEqual(repeat['ocr_regions_reused'],4)
+            pixels[10,160]=255
+            changed=reader.observe(encode())
+            self.assertEqual(run.call_count,5)
+            self.assertEqual(changed['ocr_regions_processed'],1)
+            pixels[90,5]=255  # Chat is excluded before region comparison.
+            reader.observe(encode())
+            self.assertEqual(run.call_count,5)
+            larger=np.zeros((200,400),dtype=np.uint8)
+            reader.observe(cv2.imencode('.png',larger)[1].tobytes())
+            self.assertEqual(run.call_count,9)
+
+    def test_failed_refresh_never_serves_previous_region_text(self):
+        reader=OCRReader.__new__(OCRReader);reader.executable='C:/OCR/tesseract.exe'
+        pixels=np.zeros((100,200),dtype=np.uint8)
+        with patch('waypoint.ocr.reader.subprocess.run',return_value=MagicMock(returncode=0,stdout=TSV.encode())):
+            reader.observe(cv2.imencode('.png',pixels)[1].tobytes())
+        pixels[10,160]=255
+        with patch('waypoint.ocr.reader.subprocess.run',side_effect=subprocess.TimeoutExpired('ocr',4)):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                reader.observe(cv2.imencode('.png',pixels)[1].tobytes())
+
     def test_review_readings_never_become_model_observations_and_off_clears_them(self):
         feed=Feed(None,MagicMock(),threading.Lock(),threading.Event())
         feed.frame=(time.monotonic(),b'fixture')
